@@ -23,8 +23,12 @@ void main() {
     );
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Material'),
-      'PLA',
+      'PL',
     );
+    await tester.pumpAndSettle();
+    expect(find.text('PLA'), findsOneWidget);
+    await tester.tap(find.text('PLA'));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Color'),
       'Black',

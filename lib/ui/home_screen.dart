@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
 import '../localization/xml_strings.dart';
+import '../models/filament_slot.dart';
 import '../models/printer_record.dart';
 import 'printer_editor_screen.dart';
 import 'settings_screen.dart';
@@ -136,46 +137,14 @@ class PrinterCard extends StatelessWidget {
               if (printer.slots.isEmpty)
                 Text(strings.noFilaments)
               else
-                Expanded(
-                  child: ListView.separated(
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: printer.slots.length > 3
-                        ? 3
-                        : printer.slots.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final slot = printer.slots[index];
-                      return Row(
-                        children: [
-                          Container(
-                            width: 18,
-                            height: 18,
-                            decoration: BoxDecoration(
-                              color: Color(slot.colorValue),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: scheme.outlineVariant),
-                            ),
-                          ),
-                          const SizedBox(width: 9),
-                          Expanded(
-                            child: Text(
-                              '${slot.material} · ${slot.colorName}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            strings.weightValue(
-                              _formatWeight(slot.remainingGrams),
-                            ),
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
+                for (
+                  var index = 0;
+                  index < printer.slots.length && index < 3;
+                  index++
+                ) ...[
+                  if (index > 0) const SizedBox(height: 8),
+                  _FilamentRow(slot: printer.slots[index]),
+                ],
               if (printer.slots.length > 3)
                 Text(
                   '+${printer.slots.length - 3}',
@@ -187,8 +156,45 @@ class PrinterCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  String _formatWeight(double value) => value == value.roundToDouble()
-      ? value.toInt().toString()
-      : value.toStringAsFixed(1);
+class _FilamentRow extends StatelessWidget {
+  const _FilamentRow({required this.slot});
+
+  final FilamentSlot slot;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = XmlStrings.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final weight = slot.remainingGrams == slot.remainingGrams.roundToDouble()
+        ? slot.remainingGrams.toInt().toString()
+        : slot.remainingGrams.toStringAsFixed(1);
+    return Row(
+      children: [
+        Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            color: Color(slot.colorValue),
+            shape: BoxShape.circle,
+            border: Border.all(color: scheme.outlineVariant),
+          ),
+        ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Text(
+            '${slot.material} · ${slot.colorName}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          strings.weightValue(weight),
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
+  }
 }

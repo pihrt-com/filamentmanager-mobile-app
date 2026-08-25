@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1 - 2026-08-25
+
+- Fixed printer cards not being rendered in portrait orientation.
+- Added a portrait-layout regression test for saved printers and filaments.
+- Added editable material autocomplete with a catalog of common filament types.
+
 ## 1.0.0 - 2026-08-25
 
 - Added responsive printer overview for portrait and landscape layouts.

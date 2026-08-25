@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../app_controller.dart';
 import '../localization/xml_strings.dart';
+import '../models/filament_materials.dart';
 import '../models/filament_slot.dart';
 import '../models/printer_record.dart';
 
@@ -309,16 +310,40 @@ class _SlotEditorState extends State<_SlotEditor> {
           ],
         ),
         const SizedBox(height: 8),
-        TextFormField(
-          controller: widget.draft.material,
-          textCapitalization: TextCapitalization.characters,
-          decoration: InputDecoration(
-            labelText: strings.material,
-            hintText: strings.materialHint,
-          ),
-          validator: (value) => value == null || value.trim().isEmpty
-              ? strings.requiredField
-              : null,
+        Autocomplete<String>(
+          initialValue: TextEditingValue(text: widget.draft.material.text),
+          optionsBuilder: (value) {
+            final query = value.text.trim().toLowerCase();
+            if (query.isEmpty) return const Iterable<String>.empty();
+            final matches = filamentMaterials.where(
+              (material) => material.toLowerCase().contains(query),
+            );
+            return [
+              ...matches.where(
+                (material) => material.toLowerCase().startsWith(query),
+              ),
+              ...matches.where(
+                (material) => !material.toLowerCase().startsWith(query),
+              ),
+            ];
+          },
+          onSelected: (value) => widget.draft.material.text = value,
+          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+            return TextFormField(
+              controller: controller,
+              focusNode: focusNode,
+              textCapitalization: TextCapitalization.characters,
+              decoration: InputDecoration(
+                labelText: strings.material,
+                hintText: strings.materialHint,
+              ),
+              onChanged: (value) => widget.draft.material.text = value,
+              onFieldSubmitted: (_) => onFieldSubmitted(),
+              validator: (value) => value == null || value.trim().isEmpty
+                  ? strings.requiredField
+                  : null,
+            );
+          },
         ),
         const SizedBox(height: 12),
         TextFormField(

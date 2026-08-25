@@ -183,7 +183,7 @@ local keystore should be registered as its upload key.
 
 ## Version
 
-Current application version: **1.0.0 (build 1)**
+Current application version: **1.0.1 (build 2)**
 
 Release date: **2026-08-25**
 
