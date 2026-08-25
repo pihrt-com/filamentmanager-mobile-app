@@ -11,6 +11,27 @@ The project is maintained by [Martin Pihrt](https://www.pihrt.com) and is
 published at
 [github.com/pihrt-com/filamentmanager-mobile-app](https://github.com/pihrt-com/filamentmanager-mobile-app).
 
+## Screenshots
+
+The screenshots below were captured from the application running on a real
+Android phone.
+
+### English
+
+<p align="center">
+  <img src="docs/screenshots/en/home.png" alt="Printer overview in English" width="30%">
+  <img src="docs/screenshots/en/printer-editor.png" alt="Multi-filament printer editor in English" width="30%">
+  <img src="docs/screenshots/en/settings.png" alt="Application settings in English" width="30%">
+</p>
+
+### Czech
+
+<p align="center">
+  <img src="docs/screenshots/cs/home.png" alt="Printer overview in Czech" width="30%">
+  <img src="docs/screenshots/cs/printer-editor.png" alt="Multi-filament printer editor in Czech" width="30%">
+  <img src="docs/screenshots/cs/settings.png" alt="Application settings in Czech" width="30%">
+</p>
+
 ## What the application does
 
 The home screen displays every configured printer and the filament currently
