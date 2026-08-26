@@ -2,6 +2,10 @@
 
 <img src="assets/images/app_icon.png" alt="Filament Manager application icon" width="180">
 
+<a href="https://play.google.com/store/apps/details?id=com.pihrt.filamentmanager.mobile">
+  <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" width="220">
+</a>
+
 Filament Manager is an offline Android application for keeping track of the
 filament that is currently loaded in a fleet of 3D printers. It provides a fast
 shop-floor overview without requiring printer integrations, user accounts, a
