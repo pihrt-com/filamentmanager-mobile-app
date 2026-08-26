@@ -37,7 +37,7 @@ void main() {
       OutlinedButton,
       'Add filament position',
     );
-    await tester.drag(find.byType(ListView).first, const Offset(0, -260));
+    await tester.ensureVisible(addFilament);
     await tester.pumpAndSettle();
     await tester.tap(addFilament);
     await tester.pump();
@@ -47,7 +47,7 @@ void main() {
     await tester.enterText(materialFields.at(1), 'PETG');
     await tester.enterText(colorFields.at(1), 'White');
     final save = find.widgetWithText(FilledButton, 'Save');
-    await tester.drag(find.byType(ListView).first, const Offset(0, -800));
+    await tester.ensureVisible(save);
     await tester.pumpAndSettle();
     await tester.tap(save);
     await tester.pumpAndSettle();

@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('backup round-trip preserves printers and filament positions', () {
-    const printers = [
+    final printers = [
       PrinterRecord(
         id: 42,
         name: 'XL-1',
@@ -17,6 +17,11 @@ void main() {
             colorName: 'Black',
             colorValue: 0xFF171717,
             remainingGrams: 512.5,
+            tagUid: 'E0040108662F6FBC',
+            tagInstanceId: 'bf63e92d-9ca5-53d7-9fab-ffdd0240c585',
+            tagBrand: 'Prusament',
+            tagFullWeightGrams: 1012,
+            tagLastReadAt: DateTime.utc(2026, 8, 26, 10, 30),
           ),
           FilamentSlot(
             id: 11,
@@ -41,6 +46,13 @@ void main() {
     expect(decoded.single.slots, hasLength(2));
     expect(decoded.single.slots.first.material, 'PLA');
     expect(decoded.single.slots.first.remainingGrams, 512.5);
+    expect(decoded.single.slots.first.tagUid, 'E0040108662F6FBC');
+    expect(decoded.single.slots.first.tagBrand, 'Prusament');
+    expect(decoded.single.slots.first.tagFullWeightGrams, 1012);
+    expect(
+      decoded.single.slots.first.tagLastReadAt,
+      DateTime.utc(2026, 8, 26, 10, 30),
+    );
     expect(decoded.single.slots.last.colorValue, 0xFFFFFFFF);
   });
 
@@ -49,5 +61,16 @@ void main() {
       () => BackupService().decode('{"printers":[]}'),
       throwsFormatException,
     );
+  });
+
+  test('schema version 1 backup remains importable', () {
+    const source = '''
+{"format":"filamentmanager-backup","schemaVersion":1,"printers":[{"name":"MK4-1","filaments":[{"position":1,"material":"PLA","colorName":"Black","colorValue":4279703319,"remainingGrams":500}]}]}
+''';
+    final decoded = BackupService().decode(source);
+
+    expect(decoded.single.name, 'MK4-1');
+    expect(decoded.single.slots.single.remainingGrams, 500);
+    expect(decoded.single.slots.single.tagUid, isNull);
   });
 }

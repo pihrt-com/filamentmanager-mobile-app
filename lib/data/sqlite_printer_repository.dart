@@ -16,7 +16,7 @@ class SqlitePrinterRepository implements PrinterRepository {
     );
     _database = await openDatabase(
       databasePath,
-      version: 1,
+      version: 2,
       onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
       onCreate: (db, version) async {
         await db.execute('''
@@ -34,9 +34,33 @@ class SqlitePrinterRepository implements PrinterRepository {
             color_name TEXT NOT NULL,
             color_value INTEGER NOT NULL,
             remaining_grams REAL NOT NULL,
+            tag_uid TEXT,
+            tag_instance_id TEXT,
+            tag_brand TEXT,
+            tag_full_weight_grams REAL,
+            tag_last_read_at TEXT,
             FOREIGN KEY (printer_id) REFERENCES printers(id) ON DELETE CASCADE
           )
         ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute(
+            'ALTER TABLE filament_slots ADD COLUMN tag_uid TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE filament_slots ADD COLUMN tag_instance_id TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE filament_slots ADD COLUMN tag_brand TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE filament_slots ADD COLUMN tag_full_weight_grams REAL',
+          );
+          await db.execute(
+            'ALTER TABLE filament_slots ADD COLUMN tag_last_read_at TEXT',
+          );
+        }
       },
     );
     return _database!;
@@ -71,6 +95,14 @@ class SqlitePrinterRepository implements PrinterRepository {
                   colorName: slot['color_name']! as String,
                   colorValue: slot['color_value']! as int,
                   remainingGrams: (slot['remaining_grams']! as num).toDouble(),
+                  tagUid: slot['tag_uid'] as String?,
+                  tagInstanceId: slot['tag_instance_id'] as String?,
+                  tagBrand: slot['tag_brand'] as String?,
+                  tagFullWeightGrams: (slot['tag_full_weight_grams'] as num?)
+                      ?.toDouble(),
+                  tagLastReadAt: DateTime.tryParse(
+                    slot['tag_last_read_at'] as String? ?? '',
+                  ),
                 ),
               )
               .toList(),
@@ -112,6 +144,7 @@ class SqlitePrinterRepository implements PrinterRepository {
           'color_name': slot.colorName,
           'color_value': slot.colorValue,
           'remaining_grams': slot.remainingGrams,
+          ..._tagValues(slot),
         });
       }
     });
@@ -143,9 +176,18 @@ class SqlitePrinterRepository implements PrinterRepository {
             'color_name': slot.colorName,
             'color_value': slot.colorValue,
             'remaining_grams': slot.remainingGrams,
+            ..._tagValues(slot),
           });
         }
       }
     });
   }
+
+  Map<String, Object?> _tagValues(FilamentSlot slot) => {
+    'tag_uid': slot.tagUid,
+    'tag_instance_id': slot.tagInstanceId,
+    'tag_brand': slot.tagBrand,
+    'tag_full_weight_grams': slot.tagFullWeightGrams,
+    'tag_last_read_at': slot.tagLastReadAt?.toUtc().toIso8601String(),
+  };
 }

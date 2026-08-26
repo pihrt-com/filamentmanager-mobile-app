@@ -63,18 +63,24 @@ class HomeScreen extends StatelessWidget {
                 ),
               );
             }
-            return GridView.builder(
+            final cardWidth =
+                (constraints.maxWidth - padding * 2 - 16 * (columns - 1)) /
+                columns;
+            return SingleChildScrollView(
               padding: EdgeInsets.fromLTRB(padding, 12, padding, 100),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: columns,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                mainAxisExtent: 210,
-              ),
-              itemCount: controller.printers.length,
-              itemBuilder: (context, index) => PrinterCard(
-                printer: controller.printers[index],
-                onTap: () => _openEditor(context, controller.printers[index]),
+              child: Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: [
+                  for (final printer in controller.printers)
+                    SizedBox(
+                      width: cardWidth,
+                      child: PrinterCard(
+                        printer: printer,
+                        onTap: () => _openEditor(context, printer),
+                      ),
+                    ),
+                ],
               ),
             );
           },
@@ -137,19 +143,10 @@ class PrinterCard extends StatelessWidget {
               if (printer.slots.isEmpty)
                 Text(strings.noFilaments)
               else
-                for (
-                  var index = 0;
-                  index < printer.slots.length && index < 3;
-                  index++
-                ) ...[
+                for (var index = 0; index < printer.slots.length; index++) ...[
                   if (index > 0) const SizedBox(height: 8),
                   _FilamentRow(slot: printer.slots[index]),
                 ],
-              if (printer.slots.length > 3)
-                Text(
-                  '+${printer.slots.length - 3}',
-                  style: TextStyle(color: scheme.primary),
-                ),
             ],
           ),
         ),

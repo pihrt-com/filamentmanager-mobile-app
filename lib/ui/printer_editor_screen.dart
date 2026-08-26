@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../app_controller.dart';
 import '../localization/xml_strings.dart';
 import '../models/filament_materials.dart';
 import '../models/filament_slot.dart';
 import '../models/printer_record.dart';
+import '../nfc/open_print_tag.dart';
+import '../nfc/open_print_tag_nfc_service.dart';
 
 class PrinterEditorScreen extends StatefulWidget {
   const PrinterEditorScreen({
@@ -30,6 +33,8 @@ class _PrinterEditorScreenState extends State<PrinterEditorScreen> {
   late final TextEditingController _nameController;
   late final List<_SlotDraft> _slots;
   bool _saving = false;
+  int? _nfcBusySlot;
+  final _nfcService = OpenPrintTagNfcService();
 
   @override
   void initState() {
@@ -82,6 +87,11 @@ class _PrinterEditorScreenState extends State<PrinterEditorScreen> {
           colorName: draft.colorName.text.trim(),
           colorValue: draft.color.toARGB32(),
           remainingGrams: double.parse(draft.weight.text.replaceAll(',', '.')),
+          tagUid: draft.tagUid,
+          tagInstanceId: draft.tagInstanceId,
+          tagBrand: draft.tagBrand,
+          tagFullWeightGrams: draft.tagFullWeightGrams,
+          tagLastReadAt: draft.tagLastReadAt,
         ),
       );
     }
@@ -90,6 +100,142 @@ class _PrinterEditorScreenState extends State<PrinterEditorScreen> {
     );
     if (mounted && !widget.isFirstPrinter) Navigator.of(context).pop();
   }
+
+  Future<void> _readTag(int index) async {
+    final strings = XmlStrings.of(context);
+    setState(() => _nfcBusySlot = index);
+    _showScanningDialog(strings.nfcScanReadMessage);
+    try {
+      final tag = await _nfcService.read();
+      if (!mounted) return;
+      final draft = _slots[index];
+      setState(() {
+        if (tag.material.isNotEmpty) draft.material.text = tag.material;
+        if (tag.colorValue != null) {
+          draft.color = Color(tag.colorValue!);
+          draft.colorName.text = _hexColorName(tag.colorValue!);
+        }
+        if (tag.remainingWeightGrams != null) {
+          draft.weight.text = _formatWeight(tag.remainingWeightGrams!);
+        }
+        draft
+          ..tagUid = tag.uid
+          ..tagInstanceId = tag.instanceId
+          ..tagBrand = tag.brand
+          ..tagFullWeightGrams = tag.fullWeightGrams
+          ..tagLastReadAt = DateTime.now().toUtc();
+      });
+      _message(strings.nfcReadSuccess);
+    } on OpenPrintTagException catch (error) {
+      if (mounted) _message(_nfcError(strings, error.error));
+    } finally {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        setState(() => _nfcBusySlot = null);
+      }
+    }
+  }
+
+  Future<void> _writeTag(int index) async {
+    final strings = XmlStrings.of(context);
+    final draft = _slots[index];
+    final remaining = double.tryParse(draft.weight.text.replaceAll(',', '.'));
+    if (remaining == null || draft.tagUid == null) {
+      _message(strings.nfcReadFirst);
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(strings.nfcWriteTitle),
+        content: Text(strings.nfcWriteConfirm(_formatWeight(remaining))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(strings.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(strings.nfcWrite),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _nfcBusySlot = index);
+    _showScanningDialog(strings.nfcScanWriteMessage);
+    try {
+      final tag = await _nfcService.writeRemainingWeight(
+        expectedUid: draft.tagUid!,
+        expectedInstanceId: draft.tagInstanceId,
+        remainingGrams: remaining,
+      );
+      if (!mounted) return;
+      setState(() {
+        draft
+          ..tagLastReadAt = DateTime.now().toUtc()
+          ..tagFullWeightGrams = tag.fullWeightGrams;
+      });
+      _message(strings.nfcWriteSuccess);
+    } on OpenPrintTagException catch (error) {
+      if (mounted) _message(_nfcError(strings, error.error));
+    } finally {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        setState(() => _nfcBusySlot = null);
+      }
+    }
+  }
+
+  void _showScanningDialog(String message) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          icon: const Icon(Icons.nfc, size: 42),
+          title: Text(XmlStrings.of(context).nfcHoldNear),
+          content: Row(
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(width: 20),
+              Expanded(child: Text(message)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _message(String message) =>
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+
+  String _nfcError(XmlStrings strings, OpenPrintTagError error) =>
+      switch (error) {
+        OpenPrintTagError.nfcUnsupported => strings.nfcUnsupported,
+        OpenPrintTagError.nfcDisabled => strings.nfcDisabled,
+        OpenPrintTagError.scanTimeout => strings.nfcTimeout,
+        OpenPrintTagError.notNfcV => strings.nfcNotNfcV,
+        OpenPrintTagError.notOpenPrintTag => strings.nfcNotOpenPrintTag,
+        OpenPrintTagError.corruptData => strings.nfcCorrupt,
+        OpenPrintTagError.noAuxRegion ||
+        OpenPrintTagError.notWritable => strings.nfcNotWritable,
+        OpenPrintTagError.invalidWeight => strings.invalidWeight,
+        OpenPrintTagError.auxRegionFull => strings.nfcAuxFull,
+        OpenPrintTagError.differentTag => strings.nfcDifferentTag,
+        OpenPrintTagError.writeFailed => strings.nfcWriteFailed,
+        OpenPrintTagError.invalidTag => strings.nfcInvalidTag,
+      };
+
+  String _formatWeight(double value) => value == value.roundToDouble()
+      ? value.toInt().toString()
+      : value.toStringAsFixed(1);
+
+  String _hexColorName(int argb) =>
+      '#${(argb & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
 
   @override
   Widget build(BuildContext context) {
@@ -168,6 +314,9 @@ class _PrinterEditorScreenState extends State<PrinterEditorScreen> {
                                     draft: _slots[index],
                                     number: index + 1,
                                     onRemove: () => _removeSlot(index),
+                                    onReadTag: () => _readTag(index),
+                                    onWriteTag: () => _writeTag(index),
+                                    nfcBusy: _nfcBusySlot != null,
                                   ),
                                   if (index != _slots.length - 1)
                                     const Divider(height: 32),
@@ -179,14 +328,6 @@ class _PrinterEditorScreenState extends State<PrinterEditorScreen> {
                                   label: Text(strings.addFilament),
                                 ),
                               ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Card(
-                            child: ListTile(
-                              leading: const Icon(Icons.nfc),
-                              title: Text(strings.nfcTitle),
-                              subtitle: Text(strings.nfcComing),
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -250,17 +391,24 @@ class _SlotEditor extends StatefulWidget {
     required this.draft,
     required this.number,
     required this.onRemove,
+    required this.onReadTag,
+    required this.onWriteTag,
+    required this.nfcBusy,
   });
 
   final _SlotDraft draft;
   final int number;
   final VoidCallback onRemove;
+  final VoidCallback onReadTag;
+  final VoidCallback onWriteTag;
+  final bool nfcBusy;
 
   @override
   State<_SlotEditor> createState() => _SlotEditorState();
 }
 
 class _SlotEditorState extends State<_SlotEditor> {
+  static final _openPrintTagUrl = Uri.parse('https://openprinttag.org/');
   static const palette = <Color>[
     Color(0xFF171717),
     Color(0xFFFFFFFF),
@@ -423,6 +571,77 @@ class _SlotEditorState extends State<_SlotEditor> {
             return parsed == null || parsed < 0 ? strings.invalidWeight : null;
           },
         ),
+        const SizedBox(height: 12),
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.nfc),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        strings.nfcTitle,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ),
+                  ],
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => launchUrl(
+                      _openPrintTagUrl,
+                      mode: LaunchMode.externalApplication,
+                    ),
+                    icon: const Icon(Icons.open_in_new, size: 18),
+                    label: Text(strings.nfcWebsite),
+                  ),
+                ),
+                if (widget.draft.tagUid != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    strings.nfcLinkedTag(widget.draft.tagUid!),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  if (widget.draft.tagBrand?.isNotEmpty == true)
+                    Text(
+                      strings.nfcBrand(widget.draft.tagBrand!),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                ] else ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    strings.nfcNotLinked,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: widget.nfcBusy ? null : widget.onReadTag,
+                      icon: const Icon(Icons.download),
+                      label: Text(strings.nfcRead),
+                    ),
+                    if (widget.draft.tagUid != null)
+                      FilledButton.tonalIcon(
+                        onPressed: widget.nfcBusy ? null : widget.onWriteTag,
+                        icon: const Icon(Icons.upload),
+                        label: Text(strings.nfcWriteWeight),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -434,6 +653,11 @@ class _SlotDraft {
     required this.colorName,
     required this.weight,
     required this.color,
+    this.tagUid,
+    this.tagInstanceId,
+    this.tagBrand,
+    this.tagFullWeightGrams,
+    this.tagLastReadAt,
   });
 
   factory _SlotDraft.empty() => _SlotDraft(
@@ -452,12 +676,22 @@ class _SlotDraft {
           : slot.remainingGrams.toString(),
     ),
     color: Color(slot.colorValue),
+    tagUid: slot.tagUid,
+    tagInstanceId: slot.tagInstanceId,
+    tagBrand: slot.tagBrand,
+    tagFullWeightGrams: slot.tagFullWeightGrams,
+    tagLastReadAt: slot.tagLastReadAt,
   );
 
   final TextEditingController material;
   final TextEditingController colorName;
   final TextEditingController weight;
   Color color;
+  String? tagUid;
+  String? tagInstanceId;
+  String? tagBrand;
+  double? tagFullWeightGrams;
+  DateTime? tagLastReadAt;
 
   void dispose() {
     material.dispose();

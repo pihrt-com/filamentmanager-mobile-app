@@ -6,6 +6,11 @@ class FilamentSlot {
     required this.colorName,
     required this.colorValue,
     required this.remainingGrams,
+    this.tagUid,
+    this.tagInstanceId,
+    this.tagBrand,
+    this.tagFullWeightGrams,
+    this.tagLastReadAt,
   });
 
   final int? id;
@@ -14,6 +19,11 @@ class FilamentSlot {
   final String colorName;
   final int colorValue;
   final double remainingGrams;
+  final String? tagUid;
+  final String? tagInstanceId;
+  final String? tagBrand;
+  final double? tagFullWeightGrams;
+  final DateTime? tagLastReadAt;
 
   FilamentSlot copyWith({
     int? id,
@@ -22,6 +32,11 @@ class FilamentSlot {
     String? colorName,
     int? colorValue,
     double? remainingGrams,
+    String? tagUid,
+    String? tagInstanceId,
+    String? tagBrand,
+    double? tagFullWeightGrams,
+    DateTime? tagLastReadAt,
   }) {
     return FilamentSlot(
       id: id ?? this.id,
@@ -30,6 +45,11 @@ class FilamentSlot {
       colorName: colorName ?? this.colorName,
       colorValue: colorValue ?? this.colorValue,
       remainingGrams: remainingGrams ?? this.remainingGrams,
+      tagUid: tagUid ?? this.tagUid,
+      tagInstanceId: tagInstanceId ?? this.tagInstanceId,
+      tagBrand: tagBrand ?? this.tagBrand,
+      tagFullWeightGrams: tagFullWeightGrams ?? this.tagFullWeightGrams,
+      tagLastReadAt: tagLastReadAt ?? this.tagLastReadAt,
     );
   }
 }

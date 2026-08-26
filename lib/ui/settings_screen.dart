@@ -19,7 +19,8 @@ class SettingsScreen extends StatelessWidget {
     'https://github.com/pihrt-com/filamentmanager-mobile-app',
   );
   static final _authorUrl = Uri.parse('https://www.pihrt.com');
-  static const _releaseDate = '2026-08-25';
+  static final _openPrintTagUrl = Uri.parse('https://openprinttag.org/');
+  static const _releaseDate = '2026-08-26';
 
   final AppController controller;
 
@@ -92,27 +93,10 @@ class SettingsScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            _SettingsCard(
-              title: strings.managePrinters,
-              children: [
-                for (final printer in controller.printers)
-                  _PrinterSettingsTile(
-                    controller: controller,
-                    printer: printer,
-                  ),
-                ListTile(
-                  leading: const Icon(Icons.add_circle_outline),
-                  title: Text(strings.addPrinter),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (context) => PrinterEditorScreen(
-                        controller: controller,
-                        allowNameEditing: true,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+            ListenableBuilder(
+              listenable: controller,
+              builder: (context, child) =>
+                  _buildPrinterManagement(context, strings),
             ),
             const SizedBox(height: 16),
             _SettingsCard(
@@ -139,7 +123,9 @@ class SettingsScreen extends StatelessWidget {
                 ListTile(
                   leading: const Icon(Icons.nfc),
                   title: Text(strings.nfcTitle),
-                  subtitle: Text(strings.nfcComing),
+                  subtitle: Text(strings.nfcWebsite),
+                  trailing: const Icon(Icons.open_in_new),
+                  onTap: () => _open(_openPrintTagUrl),
                 ),
               ],
             ),
@@ -193,6 +179,84 @@ class SettingsScreen extends StatelessWidget {
 
   Future<void> _open(Uri url) =>
       launchUrl(url, mode: LaunchMode.externalApplication);
+
+  Widget _buildPrinterManagement(BuildContext context, XmlStrings strings) {
+    final custom = controller.printerSortMode == PrinterSortMode.custom;
+    return _SettingsCard(
+      title: strings.managePrinters,
+      children: [
+        ListTile(
+          leading: const Icon(Icons.sort_by_alpha),
+          title: Text(strings.printerSorting),
+          trailing: DropdownButton<PrinterSortMode>(
+            value: controller.printerSortMode,
+            underline: const SizedBox.shrink(),
+            items: [
+              DropdownMenuItem(
+                value: PrinterSortMode.alphabeticalAscending,
+                child: Text(strings.sortAlphabeticalAscending),
+              ),
+              DropdownMenuItem(
+                value: PrinterSortMode.alphabeticalDescending,
+                child: Text(strings.sortAlphabeticalDescending),
+              ),
+              DropdownMenuItem(
+                value: PrinterSortMode.custom,
+                child: Text(strings.sortCustom),
+              ),
+            ],
+            onChanged: (mode) {
+              if (mode != null) controller.setPrinterSortMode(mode);
+            },
+          ),
+        ),
+        if (custom)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(
+              strings.customSortHelp,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        if (custom)
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            buildDefaultDragHandles: false,
+            itemCount: controller.printers.length,
+            onReorderItem: controller.reorderPrinters,
+            itemBuilder: (context, index) {
+              final printer = controller.printers[index];
+              return _PrinterSettingsTile(
+                key: ValueKey(printer.id ?? printer.name),
+                controller: controller,
+                printer: printer,
+                reorderIndex: index,
+              );
+            },
+          )
+        else
+          for (final printer in controller.printers)
+            _PrinterSettingsTile(
+              key: ValueKey(printer.id ?? printer.name),
+              controller: controller,
+              printer: printer,
+            ),
+        ListTile(
+          leading: const Icon(Icons.add_circle_outline),
+          title: Text(strings.addPrinter),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (context) => PrinterEditorScreen(
+                controller: controller,
+                allowNameEditing: true,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   Future<void> _exportDatabase(BuildContext context) async {
     final strings = XmlStrings.of(context);
@@ -303,10 +367,16 @@ class _SettingsCard extends StatelessWidget {
 }
 
 class _PrinterSettingsTile extends StatelessWidget {
-  const _PrinterSettingsTile({required this.controller, required this.printer});
+  const _PrinterSettingsTile({
+    super.key,
+    required this.controller,
+    required this.printer,
+    this.reorderIndex,
+  });
 
   final AppController controller;
   final PrinterRecord printer;
+  final int? reorderIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -324,10 +394,23 @@ class _PrinterSettingsTile extends StatelessWidget {
           ),
         ),
       ),
-      trailing: IconButton(
-        tooltip: strings.deletePrinter,
-        icon: const Icon(Icons.delete_outline),
-        onPressed: () => _confirmDelete(context),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: strings.deletePrinter,
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () => _confirmDelete(context),
+          ),
+          if (reorderIndex != null)
+            ReorderableDragStartListener(
+              index: reorderIndex!,
+              child: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Icon(Icons.drag_handle),
+              ),
+            ),
+        ],
       ),
     );
   }

@@ -32,6 +32,34 @@ void main() {
               colorValue: 0xFF202020,
               remainingGrams: 500,
             ),
+            FilamentSlot(
+              position: 2,
+              material: 'PETG',
+              colorName: 'White',
+              colorValue: 0xFFFFFFFF,
+              remainingGrams: 600,
+            ),
+            FilamentSlot(
+              position: 3,
+              material: 'ASA',
+              colorName: 'Red',
+              colorValue: 0xFFFF0000,
+              remainingGrams: 700,
+            ),
+            FilamentSlot(
+              position: 4,
+              material: 'TPU',
+              colorName: 'Blue',
+              colorValue: 0xFF0000FF,
+              remainingGrams: 800,
+            ),
+            FilamentSlot(
+              position: 5,
+              material: 'PVA',
+              colorName: 'Natural',
+              colorValue: 0xFFE8E0C8,
+              remainingGrams: 900,
+            ),
           ],
         ),
       ]),
@@ -45,5 +73,8 @@ void main() {
     expect(find.text('MK3-1'), findsOneWidget);
     expect(find.text('PLA · Black'), findsOneWidget);
     expect(find.text('500 g'), findsOneWidget);
+    expect(find.text('PVA · Natural'), findsOneWidget);
+    expect(find.text('900 g'), findsOneWidget);
+    expect(find.text('+2'), findsNothing);
   });
 }

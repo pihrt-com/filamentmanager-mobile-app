@@ -8,7 +8,7 @@ import '../models/filament_slot.dart';
 import '../models/printer_record.dart';
 
 class BackupService {
-  static const schemaVersion = 1;
+  static const schemaVersion = 2;
 
   String encode(List<PrinterRecord> printers, {DateTime? createdAt}) {
     final document = {
@@ -27,6 +27,13 @@ class BackupService {
                       'colorName': slot.colorName,
                       'colorValue': slot.colorValue,
                       'remainingGrams': slot.remainingGrams,
+                      'tagUid': slot.tagUid,
+                      'tagInstanceId': slot.tagInstanceId,
+                      'tagBrand': slot.tagBrand,
+                      'tagFullWeightGrams': slot.tagFullWeightGrams,
+                      'tagLastReadAt': slot.tagLastReadAt
+                          ?.toUtc()
+                          .toIso8601String(),
                     },
                   )
                   .toList(),
@@ -41,7 +48,8 @@ class BackupService {
     final value = jsonDecode(source);
     if (value is! Map<String, dynamic> ||
         value['format'] != 'filamentmanager-backup' ||
-        value['schemaVersion'] != schemaVersion ||
+        (value['schemaVersion'] != 1 &&
+            value['schemaVersion'] != schemaVersion) ||
         value['printers'] is! List) {
       throw const FormatException('Unsupported Filament Manager backup.');
     }
@@ -71,6 +79,14 @@ class BackupService {
           colorName: (rawSlot['colorName'] as String).trim(),
           colorValue: rawSlot['colorValue'] as int,
           remainingGrams: weight,
+          tagUid: rawSlot['tagUid'] as String?,
+          tagInstanceId: rawSlot['tagInstanceId'] as String?,
+          tagBrand: rawSlot['tagBrand'] as String?,
+          tagFullWeightGrams: (rawSlot['tagFullWeightGrams'] as num?)
+              ?.toDouble(),
+          tagLastReadAt: DateTime.tryParse(
+            rawSlot['tagLastReadAt'] as String? ?? '',
+          ),
         );
       }).toList();
       return PrinterRecord(name: name, slots: slots);
