@@ -48,6 +48,7 @@ class FilamentServerApi {
     required String username,
     required String password,
     required String appVersion,
+    required String deviceId,
   }) => _request(
     'POST',
     baseUrl,
@@ -57,6 +58,7 @@ class FilamentServerApi {
       'password': password,
       'deviceName': 'FilamentManager Android',
       'appVersion': appVersion,
+      'deviceId': deviceId,
     },
   );
 

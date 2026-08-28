@@ -43,11 +43,18 @@ class FilamentSyncService {
     FilamentServerApi? api,
     FlutterSecureStorage? secureStorage,
   }) : _api = api ?? FilamentServerApi(),
-       _secure = secureStorage ?? const FlutterSecureStorage();
+       _secure =
+           secureStorage ??
+           const FlutterSecureStorage(
+             aOptions: AndroidOptions(
+               storageNamespace: 'filamentmanager_server_auth_v1',
+               migrateWithBackup: true,
+             ),
+           );
 
   static const _uuid = Uuid();
-  static const _accessKey = 'filament_server_access_token';
-  static const _refreshKey = 'filament_server_refresh_token';
+  static const _sessionKey = 'filament_server_session';
+  static const _deviceIdKey = 'filament_server_device_id';
 
   final SqlitePrinterRepository repository;
   final FilamentServerApi _api;
@@ -55,6 +62,9 @@ class FilamentSyncService {
   SharedPreferences? _preferences;
   Future<SyncResult>? _activeSynchronization;
   Future<String>? _activeTokenRefresh;
+  String? _accessTokenCache;
+  String? _refreshTokenCache;
+  String _deviceId = '';
 
   bool enabled = false;
   String serverUrl = '';
@@ -81,6 +91,18 @@ class FilamentSyncService {
     serverVersion = _preferences!.getString('filament_server_version');
     role = _preferences!.getString('filament_server_role');
     displayName = _preferences!.getString('filament_server_display_name');
+    _deviceId = _preferences!.getString(_deviceIdKey) ?? '';
+    if (_deviceId.isEmpty) {
+      _deviceId = _uuid.v4();
+      await _preferences!.setString(_deviceIdKey, _deviceId);
+    }
+    final storedSession = await _loadTokenPair();
+    if (enabled && role != null && storedSession == null) {
+      role = null;
+      displayName = null;
+      await _preferences!.remove('filament_server_role');
+      await _preferences!.remove('filament_server_display_name');
+    }
     lastSyncAt = DateTime.tryParse(
       _preferences!.getString('filament_server_last_sync') ?? '',
     );
@@ -108,6 +130,7 @@ class FilamentSyncService {
         username: login.trim(),
         password: password,
         appVersion: appVersion,
+        deviceId: _deviceId,
       );
       await _storeTokenPair(auth);
       serverUrl = normalized;
@@ -391,7 +414,7 @@ class FilamentSyncService {
   }
 
   Future<void> disconnect() async {
-    final refresh = await _secure.read(key: _refreshKey);
+    final refresh = (await _loadTokenPair())?['refresh'];
     if (serverUrl.isNotEmpty && refresh != null) {
       try {
         await _api.logout(serverUrl, refresh);
@@ -399,8 +422,9 @@ class FilamentSyncService {
         // Local disconnection must also work while the server is offline.
       }
     }
-    await _secure.delete(key: _accessKey);
-    await _secure.delete(key: _refreshKey);
+    await _secure.delete(key: _sessionKey);
+    _accessTokenCache = null;
+    _refreshTokenCache = null;
     enabled = false;
     role = null;
     displayName = null;
@@ -683,7 +707,7 @@ class FilamentSyncService {
     final expiry = DateTime.tryParse(
       _preferences!.getString('filament_server_access_expiry') ?? '',
     );
-    final access = await _secure.read(key: _accessKey);
+    final access = (await _loadTokenPair())?['access'];
     if (access != null &&
         expiry != null &&
         expiry.isAfter(
@@ -695,7 +719,7 @@ class FilamentSyncService {
   }
 
   Future<String> _accessToken() async {
-    final token = await _secure.read(key: _accessKey);
+    final token = (await _loadTokenPair())?['access'];
     if (token == null) {
       throw const FilamentServerException(
         'Not connected.',
@@ -719,7 +743,7 @@ class FilamentSyncService {
   }
 
   Future<String> _performTokenRefresh() async {
-    final refresh = await _secure.read(key: _refreshKey);
+    final refresh = (await _loadTokenPair())?['refresh'];
     if (refresh == null) {
       throw const FilamentServerException(
         'Sign in to the server again.',
@@ -740,13 +764,47 @@ class FilamentSyncService {
         kind: FilamentServerErrorKind.invalidResponse,
       );
     }
-    await _secure.write(key: _accessKey, value: access);
-    await _secure.write(key: _refreshKey, value: refresh);
+    final encoded = jsonEncode({'access': access, 'refresh': refresh});
+    await _secure.write(key: _sessionKey, value: encoded);
+    final verified = await _secure.read(key: _sessionKey);
+    if (verified != encoded) {
+      throw const FilamentServerException(
+        'Secure token storage verification failed.',
+        kind: FilamentServerErrorKind.invalidResponse,
+      );
+    }
+    _accessTokenCache = access;
+    _refreshTokenCache = refresh;
     final ttl = _integer(auth['accessTokenExpiresIn'], fallback: 900);
     await _preferences!.setString(
       'filament_server_access_expiry',
       DateTime.now().toUtc().add(Duration(seconds: ttl)).toIso8601String(),
     );
+  }
+
+  Future<Map<String, String>?> _loadTokenPair() async {
+    if (_accessTokenCache != null && _refreshTokenCache != null) {
+      return {'access': _accessTokenCache!, 'refresh': _refreshTokenCache!};
+    }
+    final encoded = await _secure.read(key: _sessionKey);
+    if (encoded == null || encoded.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(encoded);
+      if (decoded is! Map) return null;
+      final access = decoded['access']?.toString();
+      final refresh = decoded['refresh']?.toString();
+      if (access == null ||
+          access.isEmpty ||
+          refresh == null ||
+          refresh.isEmpty) {
+        return null;
+      }
+      _accessTokenCache = access;
+      _refreshTokenCache = refresh;
+      return {'access': access, 'refresh': refresh};
+    } on FormatException {
+      return null;
+    }
   }
 
   Future<void> _refreshCounts() async {

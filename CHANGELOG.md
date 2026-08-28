@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.2 - 2026-08-28
+
+- Added one stable UUID per app installation so repeated sign-ins update the same server device instead of creating duplicate rows.
+- Moved server credentials into an isolated Android secure-storage namespace to avoid legacy cipher-migration failures.
+- Stored and verified the access and refresh tokens as one atomic encrypted session record and retained an in-memory session cache while the app is running.
+- Automatically returns the server card to the sign-in form when Android secure storage no longer contains a usable session.
+- Increased the Android application version to 1.2.2 (build 6).
+
 ## 1.2.1 - 2026-08-28
 
 - Prevented simultaneous automatic and manual synchronization from refreshing authentication more than once.
