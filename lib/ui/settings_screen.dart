@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +12,7 @@ import '../app_controller.dart';
 import '../data/backup_service.dart';
 import '../localization/xml_strings.dart';
 import '../models/printer_record.dart';
+import '../sync/filament_server_api.dart';
 import '../sync/filament_sync_service.dart';
 import 'printer_editor_screen.dart';
 
@@ -571,7 +574,7 @@ class _ServerSettingsCardState extends State<_ServerSettingsCard> {
         _message(strings.syncSuccess);
       }
     } on Object catch (error) {
-      if (mounted) _message(strings.syncFailed(error));
+      if (mounted) _message(_serverError(strings, error, signingIn: true));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -652,7 +655,7 @@ class _ServerSettingsCardState extends State<_ServerSettingsCard> {
         _message(strings.syncSuccess);
       }
     } on Object catch (error) {
-      if (mounted) _message(strings.syncFailed(error));
+      if (mounted) _message(_serverError(strings, error));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -691,6 +694,40 @@ class _ServerSettingsCardState extends State<_ServerSettingsCard> {
   void _message(String message) =>
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
+
+  String _serverError(
+    XmlStrings strings,
+    Object error, {
+    bool signingIn = false,
+  }) {
+    if (error is FilamentServerException) {
+      if (error.kind == FilamentServerErrorKind.invalidAddress) {
+        return strings.serverInvalidAddress;
+      }
+      if (error.kind == FilamentServerErrorKind.authenticationRequired) {
+        return strings.serverSessionExpired;
+      }
+      if (error.kind == FilamentServerErrorKind.invalidResponse) {
+        return strings.serverInvalidResponse;
+      }
+      final status = error.statusCode;
+      if (status == 401) {
+        return signingIn
+            ? strings.serverLoginRejected
+            : strings.serverSessionExpired;
+      }
+      if (status == 403) return strings.serverPermissionDenied;
+      if (status == 404) return strings.serverNotFound;
+      if (status != null && status >= 500) return strings.serverUnavailable;
+      return status == null
+          ? strings.serverConnectionFailed
+          : strings.serverRequestRejected;
+    }
+    if (error is TimeoutException) return strings.serverTimeout;
+    if (error is SocketException) return strings.serverUnavailable;
+    if (error is FormatException) return strings.serverInvalidResponse;
+    return strings.serverConnectionFailed;
+  }
 }
 
 class _SettingsCard extends StatelessWidget {

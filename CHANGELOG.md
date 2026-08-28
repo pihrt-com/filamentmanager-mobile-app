@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.1 - 2026-08-28
+
+- Prevented simultaneous automatic and manual synchronization from refreshing authentication more than once.
+- Added one safe authentication retry when downloading a server snapshot returns HTTP 401.
+- Added sanitized REST diagnostics containing only the HTTP method, endpoint path, and response status; credentials and tokens are never logged.
+- Replaced technical HTTP errors in the interface with clear localized explanations and suggested next steps.
+- Increased the Android application version to 1.2.1 (build 5).
+
 ## 1.2.0 - 2026-08-28
 
 - Added optional connection to a self-hosted FilamentManager Server with secure token storage.

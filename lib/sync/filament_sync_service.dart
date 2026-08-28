@@ -53,6 +53,8 @@ class FilamentSyncService {
   final FilamentServerApi _api;
   final FlutterSecureStorage _secure;
   SharedPreferences? _preferences;
+  Future<SyncResult>? _activeSynchronization;
+  Future<String>? _activeTokenRefresh;
 
   bool enabled = false;
   String serverUrl = '';
@@ -186,6 +188,7 @@ class FilamentSyncService {
       } else if (preview.serverPrinterCount > 0) {
         throw const FilamentServerException(
           'Uploading phone data is available only for an empty server.',
+          statusCode: 409,
         );
       }
       await repository.replacePrinters(upload);
@@ -261,7 +264,20 @@ class FilamentSyncService {
     await _refreshCounts();
   }
 
-  Future<SyncResult> synchronize() async {
+  Future<SyncResult> synchronize() {
+    final running = _activeSynchronization;
+    if (running != null) return running;
+    late final Future<SyncResult> operation;
+    operation = _synchronize().whenComplete(() {
+      if (identical(_activeSynchronization, operation)) {
+        _activeSynchronization = null;
+      }
+    });
+    _activeSynchronization = operation;
+    return operation;
+  }
+
+  Future<SyncResult> _synchronize() async {
     if (!enabled || !configured) {
       return SyncResult(
         conflictCount: conflictCount,
@@ -328,7 +344,14 @@ class FilamentSyncService {
       }
       await _refreshCounts();
       if (conflictCount == 0 && pendingCount == 0) {
-        final snapshot = await _api.snapshot(serverUrl, token);
+        Map<String, dynamic> snapshot;
+        try {
+          snapshot = await _api.snapshot(serverUrl, token);
+        } on FilamentServerException catch (error) {
+          if (error.statusCode != 401) rethrow;
+          token = await _refreshAccessToken();
+          snapshot = await _api.snapshot(serverUrl, token);
+        }
         await repository.replacePrinters(_decodeSnapshot(snapshot));
         await _markSynchronized(snapshot);
       }
@@ -673,14 +696,35 @@ class FilamentSyncService {
 
   Future<String> _accessToken() async {
     final token = await _secure.read(key: _accessKey);
-    if (token == null) throw const FilamentServerException('Not connected.');
+    if (token == null) {
+      throw const FilamentServerException(
+        'Not connected.',
+        kind: FilamentServerErrorKind.authenticationRequired,
+      );
+    }
     return token;
   }
 
-  Future<String> _refreshAccessToken() async {
+  Future<String> _refreshAccessToken() {
+    final running = _activeTokenRefresh;
+    if (running != null) return running;
+    late final Future<String> operation;
+    operation = _performTokenRefresh().whenComplete(() {
+      if (identical(_activeTokenRefresh, operation)) {
+        _activeTokenRefresh = null;
+      }
+    });
+    _activeTokenRefresh = operation;
+    return operation;
+  }
+
+  Future<String> _performTokenRefresh() async {
     final refresh = await _secure.read(key: _refreshKey);
     if (refresh == null) {
-      throw const FilamentServerException('Sign in to the server again.');
+      throw const FilamentServerException(
+        'Sign in to the server again.',
+        kind: FilamentServerErrorKind.authenticationRequired,
+      );
     }
     final auth = await _api.refresh(serverUrl, refresh);
     await _storeTokenPair(auth);
@@ -691,7 +735,10 @@ class FilamentSyncService {
     final access = auth['accessToken']?.toString();
     final refresh = auth['refreshToken']?.toString();
     if (access == null || refresh == null) {
-      throw const FilamentServerException('Invalid authentication response.');
+      throw const FilamentServerException(
+        'Invalid authentication response.',
+        kind: FilamentServerErrorKind.invalidResponse,
+      );
     }
     await _secure.write(key: _accessKey, value: access);
     await _secure.write(key: _refreshKey, value: refresh);

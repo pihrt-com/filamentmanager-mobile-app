@@ -150,6 +150,16 @@
     <string name="sync_now">Synchronize now</string>
     <string name="sync_success">Synchronization completed.</string>
     <string name="sync_failed">Synchronization failed: {message}</string>
+    <string name="server_login_rejected">The server rejected the sign-in. Check the username and password.</string>
+    <string name="server_session_expired">The server sign-in has expired. Disconnect the account and sign in again.</string>
+    <string name="server_permission_denied">This account does not have permission to perform this operation.</string>
+    <string name="server_not_found">The FilamentManager API was not found at this address. Check the server address.</string>
+    <string name="server_unavailable">The server is currently unavailable. Your changes remain stored safely on this phone.</string>
+    <string name="server_timeout">The server did not respond in time. Check the connection and try again.</string>
+    <string name="server_invalid_response">The server returned an invalid response. Check that its version is compatible with the app.</string>
+    <string name="server_invalid_address">The server address is invalid. Include https:// and the full FilamentManager path.</string>
+    <string name="server_request_rejected">The server rejected the request. Check the account permissions and server version.</string>
+    <string name="server_connection_failed">The server connection failed. Check the address, internet connection, and server availability.</string>
     <string name="server_disconnect">Disconnect account</string>
     <string name="server_github">FilamentManager Server on GitHub</string>
     <string name="server_github_repository">github.com/pihrt-com/filamentmanager-server</string>

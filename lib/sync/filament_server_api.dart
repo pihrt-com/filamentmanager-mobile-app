@@ -1,12 +1,20 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+enum FilamentServerErrorKind {
+  invalidAddress,
+  authenticationRequired,
+  invalidResponse,
+}
+
 class FilamentServerException implements Exception {
-  const FilamentServerException(this.message, {this.statusCode});
+  const FilamentServerException(this.message, {this.statusCode, this.kind});
 
   final String message;
   final int? statusCode;
+  final FilamentServerErrorKind? kind;
 
   @override
   String toString() => message;
@@ -24,7 +32,10 @@ class FilamentServerApi {
     }
     final uri = Uri.tryParse(result);
     if (uri == null || !uri.hasScheme || !uri.hasAuthority) {
-      throw const FilamentServerException('Invalid server address.');
+      throw const FilamentServerException(
+        'Invalid server address.',
+        kind: FilamentServerErrorKind.invalidAddress,
+      );
     }
     return result;
   }
@@ -105,13 +116,28 @@ class FilamentServerApi {
       'Content-Type': 'application/json; charset=utf-8',
       if (accessToken != null) 'Authorization': 'Bearer $accessToken',
     };
-    final response = method == 'GET'
-        ? await _client
-              .get(uri, headers: headers)
-              .timeout(const Duration(seconds: 20))
-        : await _client
-              .post(uri, headers: headers, body: jsonEncode(body ?? const {}))
-              .timeout(const Duration(seconds: 20));
+    late final http.Response response;
+    try {
+      response = method == 'GET'
+          ? await _client
+                .get(uri, headers: headers)
+                .timeout(const Duration(seconds: 20))
+          : await _client
+                .post(uri, headers: headers, body: jsonEncode(body ?? const {}))
+                .timeout(const Duration(seconds: 20));
+      debugPrint(
+        'FilamentServerApi: HTTP $method ${uri.path} -> ${response.statusCode}',
+      );
+    } on Object catch (error, stackTrace) {
+      debugPrint(
+        'FilamentServerApi: HTTP $method ${uri.path} failed: '
+        '${error.runtimeType}',
+      );
+      FlutterError.reportError(
+        FlutterErrorDetails(exception: error, stack: stackTrace, silent: true),
+      );
+      rethrow;
+    }
     Map<String, dynamic> decoded = const {};
     if (response.bodyBytes.isNotEmpty) {
       final value = jsonDecode(utf8.decode(response.bodyBytes));

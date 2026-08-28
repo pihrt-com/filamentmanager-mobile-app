@@ -150,6 +150,16 @@
     <string name="sync_now">Synchronizovat nyní</string>
     <string name="sync_success">Synchronizace byla dokončena.</string>
     <string name="sync_failed">Synchronizace selhala: {message}</string>
+    <string name="server_login_rejected">Server odmítl přihlášení. Zkontrolujte uživatelské jméno a heslo.</string>
+    <string name="server_session_expired">Přihlášení k serveru vypršelo. Odpojte účet a přihlaste se znovu.</string>
+    <string name="server_permission_denied">Tento účet nemá oprávnění k provedení požadované operace.</string>
+    <string name="server_not_found">Na této adrese nebylo nalezeno API FilamentManageru. Zkontrolujte adresu serveru.</string>
+    <string name="server_unavailable">Server je momentálně nedostupný. Změny zůstávají bezpečně uložené v telefonu.</string>
+    <string name="server_timeout">Server neodpověděl včas. Zkontrolujte připojení a zkuste to znovu.</string>
+    <string name="server_invalid_response">Server vrátil neplatnou odpověď. Zkontrolujte, zda je jeho verze kompatibilní s aplikací.</string>
+    <string name="server_invalid_address">Adresa serveru není platná. Uveďte https:// a úplnou cestu k FilamentManageru.</string>
+    <string name="server_request_rejected">Server požadavek odmítl. Zkontrolujte oprávnění účtu a verzi serveru.</string>
+    <string name="server_connection_failed">Spojení se serverem selhalo. Zkontrolujte adresu, internetové připojení a dostupnost serveru.</string>
     <string name="server_disconnect">Odpojit účet</string>
     <string name="server_github">FilamentManager Server na GitHubu</string>
     <string name="server_github_repository">github.com/pihrt-com/filamentmanager-server</string>

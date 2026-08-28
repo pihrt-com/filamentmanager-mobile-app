@@ -199,6 +199,16 @@ class XmlStrings {
   String get syncSuccess => _get('sync_success');
   String syncFailed(Object message) =>
       _get('sync_failed', {'message': message});
+  String get serverLoginRejected => _get('server_login_rejected');
+  String get serverSessionExpired => _get('server_session_expired');
+  String get serverPermissionDenied => _get('server_permission_denied');
+  String get serverNotFound => _get('server_not_found');
+  String get serverUnavailable => _get('server_unavailable');
+  String get serverTimeout => _get('server_timeout');
+  String get serverInvalidResponse => _get('server_invalid_response');
+  String get serverInvalidAddress => _get('server_invalid_address');
+  String get serverRequestRejected => _get('server_request_rejected');
+  String get serverConnectionFailed => _get('server_connection_failed');
   String get serverDisconnect => _get('server_disconnect');
   String get serverGithub => _get('server_github');
   String get serverGithubRepository => _get('server_github_repository');
