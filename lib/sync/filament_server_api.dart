@@ -10,11 +10,17 @@ enum FilamentServerErrorKind {
 }
 
 class FilamentServerException implements Exception {
-  const FilamentServerException(this.message, {this.statusCode, this.kind});
+  const FilamentServerException(
+    this.message, {
+    this.statusCode,
+    this.kind,
+    this.requestId,
+  });
 
   final String message;
   final int? statusCode;
   final FilamentServerErrorKind? kind;
+  final String? requestId;
 
   @override
   String toString() => message;
@@ -142,14 +148,29 @@ class FilamentServerApi {
     }
     Map<String, dynamic> decoded = const {};
     if (response.bodyBytes.isNotEmpty) {
-      final value = jsonDecode(utf8.decode(response.bodyBytes));
-      if (value is Map<String, dynamic>) decoded = value;
+      try {
+        final value = jsonDecode(utf8.decode(response.bodyBytes));
+        if (value is Map<String, dynamic>) decoded = value;
+      } on FormatException {
+        if (response.statusCode >= 200 && response.statusCode < 300) rethrow;
+      }
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      final errorPayload = decoded['error'] is Map
+          ? (decoded['error'] as Map).cast<String, dynamic>()
+          : const <String, dynamic>{};
+      final requestId = errorPayload['requestId']?.toString();
+      debugPrint(
+        'FilamentServerApi: server error '
+        '${errorPayload['code'] ?? response.statusCode}'
+        '${requestId == null ? '' : ' request=$requestId'}',
+      );
       throw FilamentServerException(
-        decoded['message']?.toString() ??
+        errorPayload['message']?.toString() ??
+            decoded['message']?.toString() ??
             'Server returned HTTP ${response.statusCode}.',
         statusCode: response.statusCode,
+        requestId: requestId,
       );
     }
     return decoded;

@@ -204,6 +204,9 @@ class XmlStrings {
   String get serverPermissionDenied => _get('server_permission_denied');
   String get serverNotFound => _get('server_not_found');
   String get serverUnavailable => _get('server_unavailable');
+  String serverInternalError(String requestId) =>
+      _get('server_internal_error', {'requestId': requestId});
+  String get serverInternalErrorNoId => _get('server_internal_error_no_id');
   String get serverTimeout => _get('server_timeout');
   String get serverInvalidResponse => _get('server_invalid_response');
   String get serverInvalidAddress => _get('server_invalid_address');

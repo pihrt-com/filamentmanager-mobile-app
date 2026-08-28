@@ -155,6 +155,8 @@
     <string name="server_permission_denied">Tento účet nemá oprávnění k provedení požadované operace.</string>
     <string name="server_not_found">Na této adrese nebylo nalezeno API FilamentManageru. Zkontrolujte adresu serveru.</string>
     <string name="server_unavailable">Server je momentálně nedostupný. Změny zůstávají bezpečně uložené v telefonu.</string>
+    <string name="server_internal_error">Server při zpracování synchronizace narazil na interní chybu. Identifikátor požadavku: {requestId}</string>
+    <string name="server_internal_error_no_id">Server při zpracování synchronizace narazil na interní chybu. Změny zůstávají bezpečně uložené v telefonu.</string>
     <string name="server_timeout">Server neodpověděl včas. Zkontrolujte připojení a zkuste to znovu.</string>
     <string name="server_invalid_response">Server vrátil neplatnou odpověď. Zkontrolujte, zda je jeho verze kompatibilní s aplikací.</string>
     <string name="server_invalid_address">Adresa serveru není platná. Uveďte https:// a úplnou cestu k FilamentManageru.</string>

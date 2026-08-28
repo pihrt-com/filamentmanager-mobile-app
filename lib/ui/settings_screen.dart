@@ -718,7 +718,11 @@ class _ServerSettingsCardState extends State<_ServerSettingsCard> {
       }
       if (status == 403) return strings.serverPermissionDenied;
       if (status == 404) return strings.serverNotFound;
-      if (status != null && status >= 500) return strings.serverUnavailable;
+      if (status != null && status >= 500) {
+        return error.requestId == null
+            ? strings.serverInternalErrorNoId
+            : strings.serverInternalError(error.requestId!);
+      }
       return status == null
           ? strings.serverConnectionFailed
           : strings.serverRequestRejected;

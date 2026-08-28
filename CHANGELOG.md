@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.3 - 2026-08-28
+
+- Distinguished an internal server error from an unreachable server during synchronization.
+- Displayed the safe server request identifier for HTTP 5xx responses so administrators can match a mobile error with the server log.
+- Parsed the server API's nested error envelope and safely handled non-JSON error pages without hiding the original HTTP status.
+- Increased the Android application version to 1.2.3 (build 7).
+
 ## 1.2.2 - 2026-08-28
 
 - Added one stable UUID per app installation so repeated sign-ins update the same server device instead of creating duplicate rows.

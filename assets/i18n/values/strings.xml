@@ -155,6 +155,8 @@
     <string name="server_permission_denied">This account does not have permission to perform this operation.</string>
     <string name="server_not_found">The FilamentManager API was not found at this address. Check the server address.</string>
     <string name="server_unavailable">The server is currently unavailable. Your changes remain stored safely on this phone.</string>
+    <string name="server_internal_error">The server encountered an internal error while processing synchronization. Request ID: {requestId}</string>
+    <string name="server_internal_error_no_id">The server encountered an internal error while processing synchronization. Your changes remain stored safely on this phone.</string>
     <string name="server_timeout">The server did not respond in time. Check the connection and try again.</string>
     <string name="server_invalid_response">The server returned an invalid response. Check that its version is compatible with the app.</string>
     <string name="server_invalid_address">The server address is invalid. Include https:// and the full FilamentManager path.</string>
