@@ -233,6 +233,18 @@ class XmlStrings {
   String get keepPhone => _get('keep_phone');
   String get offlineServerNote => _get('offline_server_note');
   String get serverReadOnly => _get('server_read_only');
+  String get serverCloudDisabled => _get('server_cloud_disabled');
+  String get serverCloudOnline => _get('server_cloud_online');
+  String get serverCloudOffline => _get('server_cloud_offline');
+  String get serverCloudChecking => _get('server_cloud_checking');
+  String get unloadSpool => _get('unload_spool');
+  String get unloadSpoolTitle => _get('unload_spool_title');
+  String get unloadSpoolMessage => _get('unload_spool_message');
+  String get printerStatusActive => _get('printer_status_active');
+  String get printerStatusMaintenance => _get('printer_status_maintenance');
+  String get printerStatusDowntime => _get('printer_status_downtime');
+  String get printerStatusFault => _get('printer_status_fault');
+  String get printerStatusInactive => _get('printer_status_inactive');
 }
 
 class XmlStringsDelegate extends LocalizationsDelegate<XmlStrings> {

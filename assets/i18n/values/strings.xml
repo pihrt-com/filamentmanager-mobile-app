@@ -180,4 +180,16 @@
     <string name="keep_phone">Keep phone versions</string>
     <string name="offline_server_note">Data remains on this phone and changes wait safely until the server is available.</string>
     <string name="server_read_only">This server account has read-only access.</string>
+    <string name="server_cloud_disabled">Server connection is disabled</string>
+    <string name="server_cloud_online">Server is connected</string>
+    <string name="server_cloud_offline">Server is unavailable; changes are waiting on this phone</string>
+    <string name="server_cloud_checking">Checking server status</string>
+    <string name="unload_spool">Unload spool</string>
+    <string name="unload_spool_title">Unload the spool from this printer?</string>
+    <string name="unload_spool_message">The spool will be removed from this printer slot and returned to inventory on the connected server.</string>
+    <string name="printer_status_active">Operational</string>
+    <string name="printer_status_maintenance">Maintenance</string>
+    <string name="printer_status_downtime">Downtime</string>
+    <string name="printer_status_fault">Fault</string>
+    <string name="printer_status_inactive">Out of service</string>
 </resources>

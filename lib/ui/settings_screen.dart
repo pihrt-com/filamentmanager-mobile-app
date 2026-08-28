@@ -498,7 +498,7 @@ class _ServerSettingsCardState extends State<_ServerSettingsCard> {
                 _sync.lastSyncAt == null
                     ? strings.serverNeverSynced
                     : strings.serverLastSync(
-                        _sync.lastSyncAt!.toLocal().toString(),
+                        _formatDateTime(_sync.lastSyncAt!),
                       ),
               ),
               subtitle: Text(
@@ -543,6 +543,13 @@ class _ServerSettingsCardState extends State<_ServerSettingsCard> {
         ],
       ],
     );
+  }
+
+  String _formatDateTime(DateTime value) {
+    final local = value.toLocal();
+    String two(int part) => part.toString().padLeft(2, '0');
+    return '${local.year}-${two(local.month)}-${two(local.day)} '
+        '${two(local.hour)}:${two(local.minute)}:${two(local.second)}';
   }
 
   Future<void> _connect() async {

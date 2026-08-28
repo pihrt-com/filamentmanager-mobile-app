@@ -180,4 +180,16 @@
     <string name="keep_phone">Ponechat verze z telefonu</string>
     <string name="offline_server_note">Data zůstávají v telefonu a změny bezpečně počkají, dokud nebude server dostupný.</string>
     <string name="server_read_only">Tento serverový účet má přístup pouze pro čtení.</string>
+    <string name="server_cloud_disabled">Propojení se serverem je vypnuté</string>
+    <string name="server_cloud_online">Server je připojený</string>
+    <string name="server_cloud_offline">Server je nedostupný, změny čekají v telefonu</string>
+    <string name="server_cloud_checking">Stav serveru se ověřuje</string>
+    <string name="unload_spool">Vysunout cívku</string>
+    <string name="unload_spool_title">Vysunout cívku z tiskárny?</string>
+    <string name="unload_spool_message">Cívka se odebere z této pozice tiskárny a na propojeném serveru se vrátí do skladu.</string>
+    <string name="printer_status_active">V provozu</string>
+    <string name="printer_status_maintenance">Údržba</string>
+    <string name="printer_status_downtime">Odstávka</string>
+    <string name="printer_status_fault">Porucha</string>
+    <string name="printer_status_inactive">Mimo provoz</string>
 </resources>

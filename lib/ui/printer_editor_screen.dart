@@ -61,6 +61,40 @@ class _PrinterEditorScreenState extends State<PrinterEditorScreen> {
     });
   }
 
+  Future<void> _unloadSlot(int index) async {
+    final printer = widget.printer;
+    if (printer == null || index >= printer.slots.length) return;
+    final strings = XmlStrings.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(strings.unloadSpoolTitle),
+        content: Text(strings.unloadSpoolMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(strings.cancel),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.eject),
+            label: Text(strings.unloadSpool),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _saving = true);
+    try {
+      await widget.controller.unloadSpool(printer, printer.slots[index]);
+      if (mounted) Navigator.of(context).pop();
+    } on Object catch (error) {
+      if (mounted) _message(strings.syncFailed(error));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Future<void> _save() async {
     final strings = XmlStrings.of(context);
     if (!_formKey.currentState!.validate()) return;
@@ -352,6 +386,11 @@ class _PrinterEditorScreenState extends State<PrinterEditorScreen> {
                                     draft: _slots[index],
                                     number: index + 1,
                                     onRemove: () => _removeSlot(index),
+                                    onUnload:
+                                        _slots[index].id != null ||
+                                            _slots[index].serverSpoolId != null
+                                        ? () => _unloadSlot(index)
+                                        : null,
                                     onReadTag: () => _readTag(index),
                                     onWriteTag: () => _writeTag(index),
                                     nfcBusy: _nfcBusySlot != null,
@@ -429,6 +468,7 @@ class _SlotEditor extends StatefulWidget {
     required this.draft,
     required this.number,
     required this.onRemove,
+    required this.onUnload,
     required this.onReadTag,
     required this.onWriteTag,
     required this.nfcBusy,
@@ -437,6 +477,7 @@ class _SlotEditor extends StatefulWidget {
   final _SlotDraft draft;
   final int number;
   final VoidCallback onRemove;
+  final VoidCallback? onUnload;
   final VoidCallback onReadTag;
   final VoidCallback onWriteTag;
   final bool nfcBusy;
@@ -486,6 +527,11 @@ class _SlotEditorState extends State<_SlotEditor> {
                 style: Theme.of(context).textTheme.titleSmall
                     ?.copyWith(fontWeight: FontWeight.w700),
               ),
+            ),
+            IconButton(
+              tooltip: strings.unloadSpool,
+              onPressed: widget.onUnload,
+              icon: const Icon(Icons.eject_outlined),
             ),
             IconButton(
               tooltip: strings.removeFilament,

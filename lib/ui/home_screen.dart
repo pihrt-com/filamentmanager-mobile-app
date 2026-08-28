@@ -4,6 +4,8 @@ import '../app_controller.dart';
 import '../localization/xml_strings.dart';
 import '../models/filament_slot.dart';
 import '../models/printer_record.dart';
+import '../sync/filament_server_api.dart';
+import '../sync/filament_sync_service.dart';
 import 'printer_editor_screen.dart';
 import 'settings_screen.dart';
 
@@ -30,6 +32,39 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _refresh(BuildContext context) async {
+    if (!controller.serverConnected) return;
+    final strings = XmlStrings.of(context);
+    try {
+      final result = await controller.synchronize();
+      if (!context.mounted) return;
+      final message = result.conflictCount == 0
+          ? strings.syncSuccess
+          : strings.resolveConflictsMessage(result.conflictCount);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    } on Object catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.syncFailed(_syncError(strings, error)))),
+      );
+    }
+  }
+
+  String _syncError(XmlStrings strings, Object error) {
+    if (error is FilamentServerException) {
+      return switch (error.statusCode) {
+        401 => strings.serverSessionExpired,
+        403 => strings.serverPermissionDenied,
+        404 => strings.serverNotFound,
+        final status when status != null && status >= 500 =>
+          strings.serverInternalErrorNoId,
+        _ => strings.serverConnectionFailed,
+      };
+    }
+    return strings.serverUnavailable;
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = XmlStrings.of(context);
@@ -37,6 +72,7 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(strings.printers),
         actions: [
+          _ServerCloudButton(controller: controller),
           IconButton(
             tooltip: strings.settings,
             icon: const Icon(Icons.settings_outlined),
@@ -59,34 +95,43 @@ class HomeScreen extends StatelessWidget {
                 : 1;
             final padding = constraints.maxWidth >= 650 ? 24.0 : 16.0;
             if (columns == 1) {
-              return ListView.separated(
-                padding: EdgeInsets.fromLTRB(padding, 12, padding, 100),
-                itemCount: controller.printers.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (context, index) => PrinterCard(
-                  printer: controller.printers[index],
-                  onTap: () => _openEditor(context, controller.printers[index]),
+              return RefreshIndicator(
+                onRefresh: () => _refresh(context),
+                child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(padding, 12, padding, 100),
+                  itemCount: controller.printers.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) => PrinterCard(
+                    printer: controller.printers[index],
+                    onTap: () =>
+                        _openEditor(context, controller.printers[index]),
+                  ),
                 ),
               );
             }
             final cardWidth =
                 (constraints.maxWidth - padding * 2 - 16 * (columns - 1)) /
                 columns;
-            return SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(padding, 12, padding, 100),
-              child: Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                children: [
-                  for (final printer in controller.printers)
-                    SizedBox(
-                      width: cardWidth,
-                      child: PrinterCard(
-                        printer: printer,
-                        onTap: () => _openEditor(context, printer),
+            return RefreshIndicator(
+              onRefresh: () => _refresh(context),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(padding, 12, padding, 100),
+                child: Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    for (final printer in controller.printers)
+                      SizedBox(
+                        width: cardWidth,
+                        child: PrinterCard(
+                          printer: printer,
+                          onTap: () => _openEditor(context, printer),
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             );
           },
@@ -96,6 +141,46 @@ class HomeScreen extends StatelessWidget {
         onPressed: controller.canEdit ? () => _openEditor(context) : null,
         icon: const Icon(Icons.add),
         label: Text(strings.addPrinter),
+      ),
+    );
+  }
+}
+
+class _ServerCloudButton extends StatelessWidget {
+  const _ServerCloudButton({required this.controller});
+
+  final AppController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = XmlStrings.of(context);
+    final (icon, color, tooltip) = !controller.serverEnabled
+        ? (Icons.cloud_off_outlined, Colors.grey, strings.serverCloudDisabled)
+        : switch (controller.serverReachability) {
+            ServerReachability.online => (
+              Icons.cloud_done,
+              Colors.green,
+              strings.serverCloudOnline,
+            ),
+            ServerReachability.offline => (
+              Icons.cloud_off,
+              Colors.red,
+              strings.serverCloudOffline,
+            ),
+            ServerReachability.unknown => (
+              Icons.cloud_queue,
+              Colors.grey,
+              strings.serverCloudChecking,
+            ),
+          };
+    return IconButton(
+      tooltip: tooltip,
+      color: color,
+      icon: Icon(icon),
+      onPressed: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => SettingsScreen(controller: controller),
+        ),
       ),
     );
   }
@@ -111,7 +196,9 @@ class PrinterCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final strings = XmlStrings.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final available = printer.status == 'active';
     return Card(
+      color: available ? null : scheme.surfaceContainerHighest,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -142,6 +229,10 @@ class PrinterCard extends StatelessWidget {
                           ?.copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
+                  if (!available) ...[
+                    const SizedBox(width: 8),
+                    _PrinterStatusBadge(status: printer.status),
+                  ],
                   const Icon(Icons.chevron_right),
                 ],
               ),
@@ -156,6 +247,60 @@ class PrinterCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PrinterStatusBadge extends StatelessWidget {
+  const _PrinterStatusBadge({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = XmlStrings.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final (label, background, foreground) = switch (status) {
+      'maintenance' => (
+        strings.printerStatusMaintenance,
+        scheme.tertiaryContainer,
+        scheme.onTertiaryContainer,
+      ),
+      'downtime' => (
+        strings.printerStatusDowntime,
+        scheme.secondaryContainer,
+        scheme.onSecondaryContainer,
+      ),
+      'fault' => (
+        strings.printerStatusFault,
+        scheme.errorContainer,
+        scheme.onErrorContainer,
+      ),
+      'inactive' => (
+        strings.printerStatusInactive,
+        scheme.surfaceContainerHighest,
+        scheme.onSurfaceVariant,
+      ),
+      _ => (
+        strings.printerStatusActive,
+        scheme.primaryContainer,
+        scheme.onPrimaryContainer,
+      ),
+    };
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 120),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.labelSmall
+            ?.copyWith(color: foreground, fontWeight: FontWeight.w700),
       ),
     );
   }

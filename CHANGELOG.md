@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.0 - 2026-08-28
+
+- Added pull-to-refresh synchronization to the printer overview in portrait and landscape layouts.
+- Added a cloud indicator that shows whether server synchronization is disabled, online, offline, or still being checked.
+- Added localized printer operational-state badges and unavailable-card styling matching the server dashboard.
+- Added an action to unload a spool from a printer while retaining it in server inventory.
+- Removed fractional seconds from the last-synchronization time shown in Settings.
+- Increased the Android application version to 1.3.0 (build 9).
+
 ## 1.2.4 - 2026-08-28
 
 - Fixed both conflict-resolution choices so the selected phone or server version is actually applied.

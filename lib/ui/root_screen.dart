@@ -21,6 +21,7 @@ class _RootScreenState extends State<RootScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncIfConnected());
   }
 
   @override
@@ -32,13 +33,18 @@ class _RootScreenState extends State<RootScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && controller.serverConnected) {
-      controller.synchronize().catchError(
-        (_) => SyncResult(
-          conflictCount: controller.syncService?.conflictCount ?? 0,
-          pendingCount: controller.syncService?.pendingCount ?? 0,
-        ),
-      );
+      _syncIfConnected();
     }
+  }
+
+  void _syncIfConnected() {
+    if (!controller.serverConnected) return;
+    controller.synchronize().catchError(
+      (_) => SyncResult(
+        conflictCount: controller.syncService?.conflictCount ?? 0,
+        pendingCount: controller.syncService?.pendingCount ?? 0,
+      ),
+    );
   }
 
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/printer_repository.dart';
+import 'models/filament_slot.dart';
 import 'models/printer_record.dart';
 import 'sync/filament_sync_service.dart';
 
@@ -28,6 +29,8 @@ class AppController extends ChangeNotifier {
   PrinterSortMode get printerSortMode => _printerSortMode;
   bool get serverEnabled => syncService?.enabled ?? false;
   bool get serverConnected => syncService?.connected ?? false;
+  ServerReachability get serverReachability =>
+      syncService?.reachability ?? ServerReachability.unknown;
   bool get canEdit => !serverConnected || (syncService?.canWrite ?? true);
 
   Future<void> initialize() async {
@@ -111,10 +114,27 @@ class AppController extends ChangeNotifier {
   }
 
   Future<SyncResult> synchronize() async {
-    final result = await syncService!.synchronize();
+    try {
+      final result = await syncService!.synchronize();
+      await _reloadPrinters(persistCustomOrder: true);
+      return result;
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<void> unloadSpool(PrinterRecord printer, FilamentSlot slot) async {
+    await syncService?.queueSpoolUnload(printer, slot);
+    final remaining = printer.slots.where((item) {
+      if (slot.id != null && item.id == slot.id) return false;
+      if (slot.serverSlotId != null && item.serverSlotId == slot.serverSlotId) {
+        return false;
+      }
+      return !identical(item, slot);
+    }).toList();
+    await repository.savePrinter(printer.copyWith(slots: remaining));
     await _reloadPrinters(persistCustomOrder: true);
     notifyListeners();
-    return result;
   }
 
   Future<void> resolveSyncConflicts({required bool keepPhone}) async {

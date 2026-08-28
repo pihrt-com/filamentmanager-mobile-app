@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -15,6 +16,8 @@ import '../models/printer_record.dart';
 import 'filament_server_api.dart';
 
 enum InitialSyncMode { upload, download, merge }
+
+enum ServerReachability { unknown, online, offline }
 
 class InitialSyncPreview {
   const InitialSyncPreview({
@@ -76,6 +79,7 @@ class FilamentSyncService {
   int pendingCount = 0;
   int conflictCount = 0;
   bool busy = false;
+  ServerReachability reachability = ServerReachability.unknown;
 
   bool get configured => serverUrl.isNotEmpty && username.isNotEmpty;
   bool get connected => enabled && configured && role != null;
@@ -159,6 +163,7 @@ class FilamentSyncService {
         );
       }
       final snapshot = await _api.snapshot(normalized, await _accessToken());
+      reachability = ServerReachability.online;
       final serverNames = _list(snapshot['printers'])
           .map((item) => item['name']?.toString().toLowerCase())
           .whereType<String>()
@@ -173,6 +178,9 @@ class FilamentSyncService {
         serverPrinterCount: _list(snapshot['printers']).length,
         conflictingPrinterNames: conflicts,
       );
+    } on Object catch (error) {
+      _recordConnectionFailure(error);
+      rethrow;
     } finally {
       busy = false;
     }
@@ -283,6 +291,56 @@ class FilamentSyncService {
           priority: 5,
         );
       }
+    }
+    await _refreshCounts();
+  }
+
+  Future<void> queueSpoolUnload(
+    PrinterRecord printer,
+    FilamentSlot slot,
+  ) async {
+    if (!enabled || !canWrite) return;
+    final spoolId = slot.serverSpoolId;
+    final slotId = slot.serverSlotId;
+    if (spoolId != null) {
+      await _queueMutation(
+        type: 'spool',
+        id: spoolId,
+        baseVersion: slot.serverSpoolVersion,
+        priority: 40,
+        data: {
+          'material_id': slot.serverMaterialId,
+          'location_id': slot.serverLocationId,
+          'tag_uid': slot.tagUid,
+          'openprinttag_id': slot.openPrintTagId ?? slot.tagInstanceId,
+          'original_net_weight_g':
+              slot.originalWeightGrams ??
+              slot.tagFullWeightGrams ??
+              slot.remainingGrams,
+          'current_net_weight_g': slot.remainingGrams,
+          'tare_weight_g': slot.tareWeightGrams,
+          'purchase_date': slot.purchaseDate
+              ?.toIso8601String()
+              .split('T')
+              .first,
+          'batch_number': slot.batchNumber,
+          'status': 'in_stock',
+          'notes': slot.notes,
+        },
+      );
+    }
+    if (slotId != null && printer.serverId != null) {
+      await _queueMutation(
+        type: 'printer_slot',
+        id: slotId,
+        baseVersion: slot.serverSlotVersion,
+        priority: 50,
+        data: {
+          'printer_id': printer.serverId,
+          'slot_number': slot.position,
+          'loaded_spool_id': null,
+        },
+      );
     }
     await _refreshCounts();
   }
@@ -401,10 +459,14 @@ class FilamentSyncService {
         await _markSynchronized(snapshot);
       }
       await _refreshCounts();
+      reachability = ServerReachability.online;
       return SyncResult(
         conflictCount: conflictCount,
         pendingCount: pendingCount,
       );
+    } on Object catch (error) {
+      _recordConnectionFailure(error);
+      rethrow;
     } finally {
       busy = false;
     }
@@ -509,6 +571,7 @@ class FilamentSyncService {
     _accessTokenCache = null;
     _refreshTokenCache = null;
     enabled = false;
+    reachability = ServerReachability.unknown;
     role = null;
     displayName = null;
     await _preferences!.setBool('filament_server_enabled', false);
@@ -902,6 +965,17 @@ class FilamentSyncService {
           await db.rawQuery('SELECT COUNT(*) FROM sync_conflicts'),
         ) ??
         0;
+  }
+
+  void _recordConnectionFailure(Object error) {
+    if (error is FilamentServerException) {
+      final status = error.statusCode;
+      reachability = status != null && status < 500
+          ? ServerReachability.online
+          : ServerReachability.offline;
+      return;
+    }
+    reachability = ServerReachability.offline;
   }
 
   Future<void> _ensureTables(Database db) async {

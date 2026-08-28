@@ -23,6 +23,7 @@ void main() {
         const PrinterRecord(
           id: 1,
           name: 'MK3-1',
+          status: 'inactive',
           slots: [
             FilamentSlot(
               id: 1,
@@ -71,10 +72,12 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('MK3-1'), findsOneWidget);
+    expect(find.byType(RefreshIndicator), findsOneWidget);
     expect(find.text('PLA · Black'), findsOneWidget);
     expect(find.text('500 g'), findsOneWidget);
     expect(find.text('PVA · Natural'), findsOneWidget);
     expect(find.text('900 g'), findsOneWidget);
+    expect(find.text('Out of service'), findsOneWidget);
     expect(find.text('+2'), findsNothing);
   });
 }

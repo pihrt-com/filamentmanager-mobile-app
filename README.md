@@ -65,6 +65,7 @@ Tapping a printer on the home screen opens its loaded-filament editor. The mater
 - Optional bidirectional synchronization with a self-hosted FilamentManager Server.
 - Secure Android storage for rotating server tokens; passwords are never persisted.
 - Persistent offline change queue with manual synchronization and conflict resolution.
+- Pull-to-refresh synchronization, a live cloud connection indicator, printer operational-state badges, and spool unloading from printer slots.
 - Detailed spool metadata including manufacturer, commercial name, diameter, original and tare weights, purchase date, storage location, batch, OpenPrintTag ID, and notes.
 - Preset colors plus a custom RGB picker with live HEX preview.
 
