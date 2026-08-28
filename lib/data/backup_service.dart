@@ -8,7 +8,7 @@ import '../models/filament_slot.dart';
 import '../models/printer_record.dart';
 
 class BackupService {
-  static const schemaVersion = 2;
+  static const schemaVersion = 3;
 
   String encode(List<PrinterRecord> printers, {DateTime? createdAt}) {
     final document = {
@@ -34,6 +34,17 @@ class BackupService {
                       'tagLastReadAt': slot.tagLastReadAt
                           ?.toUtc()
                           .toIso8601String(),
+                      'manufacturer': slot.manufacturer,
+                      'commercialName': slot.commercialName,
+                      'diameterMm': slot.diameterMm,
+                      'originalWeightGrams': slot.originalWeightGrams,
+                      'tareWeightGrams': slot.tareWeightGrams,
+                      'purchaseDate': slot.purchaseDate?.toIso8601String(),
+                      'storageLocation': slot.storageLocation,
+                      'storageLocationCode': slot.storageLocationCode,
+                      'batchNumber': slot.batchNumber,
+                      'openPrintTagId': slot.openPrintTagId,
+                      'notes': slot.notes,
                     },
                   )
                   .toList(),
@@ -49,6 +60,7 @@ class BackupService {
     if (value is! Map<String, dynamic> ||
         value['format'] != 'filamentmanager-backup' ||
         (value['schemaVersion'] != 1 &&
+            value['schemaVersion'] != 2 &&
             value['schemaVersion'] != schemaVersion) ||
         value['printers'] is! List) {
       throw const FormatException('Unsupported Filament Manager backup.');
@@ -87,6 +99,20 @@ class BackupService {
           tagLastReadAt: DateTime.tryParse(
             rawSlot['tagLastReadAt'] as String? ?? '',
           ),
+          manufacturer: rawSlot['manufacturer'] as String?,
+          commercialName: rawSlot['commercialName'] as String?,
+          diameterMm: (rawSlot['diameterMm'] as num?)?.toDouble() ?? 1.75,
+          originalWeightGrams: (rawSlot['originalWeightGrams'] as num?)
+              ?.toDouble(),
+          tareWeightGrams: (rawSlot['tareWeightGrams'] as num?)?.toDouble(),
+          purchaseDate: DateTime.tryParse(
+            rawSlot['purchaseDate'] as String? ?? '',
+          ),
+          storageLocation: rawSlot['storageLocation'] as String?,
+          storageLocationCode: rawSlot['storageLocationCode'] as String?,
+          batchNumber: rawSlot['batchNumber'] as String?,
+          openPrintTagId: rawSlot['openPrintTagId'] as String?,
+          notes: rawSlot['notes'] as String?,
         );
       }).toList();
       return PrinterRecord(name: name, slots: slots);

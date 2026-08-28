@@ -6,10 +6,15 @@ import 'data/sqlite_printer_repository.dart';
 import 'localization/xml_strings.dart';
 import 'theme/app_theme.dart';
 import 'ui/root_screen.dart';
+import 'sync/filament_sync_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final controller = AppController(repository: SqlitePrinterRepository());
+  final repository = SqlitePrinterRepository();
+  final controller = AppController(
+    repository: repository,
+    syncService: FilamentSyncService(repository: repository),
+  );
   await controller.initialize();
   runApp(FilamentManagerApp(controller: controller));
 }

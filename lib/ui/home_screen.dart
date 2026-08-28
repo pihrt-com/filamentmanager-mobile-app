@@ -13,6 +13,12 @@ class HomeScreen extends StatelessWidget {
   final AppController controller;
 
   Future<void> _openEditor(BuildContext context, [PrinterRecord? printer]) {
+    if (!controller.canEdit) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(XmlStrings.of(context).serverReadOnly)),
+      );
+      return Future.value();
+    }
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) => PrinterEditorScreen(
@@ -87,7 +93,7 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openEditor(context),
+        onPressed: controller.canEdit ? () => _openEditor(context) : null,
         icon: const Icon(Icons.add),
         label: Text(strings.addPrinter),
       ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../app_controller.dart';
 import '../localization/xml_strings.dart';
@@ -82,6 +81,7 @@ class _PrinterEditorScreenState extends State<PrinterEditorScreen> {
       final draft = _slots[index];
       slots.add(
         FilamentSlot(
+          id: draft.id,
           position: index + 1,
           material: draft.material.text.trim(),
           colorName: draft.colorName.text.trim(),
@@ -92,11 +92,49 @@ class _PrinterEditorScreenState extends State<PrinterEditorScreen> {
           tagBrand: draft.tagBrand,
           tagFullWeightGrams: draft.tagFullWeightGrams,
           tagLastReadAt: draft.tagLastReadAt,
+          manufacturer: draft.manufacturer.text.trim().nullIfEmpty,
+          commercialName: draft.commercialName.text.trim().nullIfEmpty,
+          diameterMm:
+              double.tryParse(draft.diameter.text.replaceAll(',', '.')) ?? 1.75,
+          originalWeightGrams: double.tryParse(
+            draft.originalWeight.text.replaceAll(',', '.'),
+          ),
+          tareWeightGrams: double.tryParse(
+            draft.tareWeight.text.replaceAll(',', '.'),
+          ),
+          purchaseDate: DateTime.tryParse(draft.purchaseDate.text.trim()),
+          storageLocation: draft.storageLocation.text.trim().nullIfEmpty,
+          storageLocationCode: draft.storageLocationCode.text
+              .trim()
+              .nullIfEmpty,
+          batchNumber: draft.batchNumber.text.trim().nullIfEmpty,
+          openPrintTagId: draft.openPrintTagId.text.trim().nullIfEmpty,
+          notes: draft.notes.text.trim().nullIfEmpty,
+          serverSlotId: draft.serverSlotId,
+          serverSlotVersion: draft.serverSlotVersion,
+          serverMaterialId: draft.serverMaterialId,
+          serverMaterialVersion: draft.serverMaterialVersion,
+          serverSpoolId: draft.serverSpoolId,
+          serverSpoolVersion: draft.serverSpoolVersion,
+          serverManufacturerId: draft.serverManufacturerId,
+          serverManufacturerVersion: draft.serverManufacturerVersion,
+          serverLocationId: draft.serverLocationId,
+          serverLocationVersion: draft.serverLocationVersion,
         ),
       );
     }
     await widget.controller.savePrinter(
-      PrinterRecord(id: widget.printer?.id, name: name, slots: slots),
+      PrinterRecord(
+        id: widget.printer?.id,
+        name: name,
+        slots: slots,
+        manufacturer: widget.printer?.manufacturer,
+        model: widget.printer?.model,
+        description: widget.printer?.description,
+        status: widget.printer?.status ?? 'active',
+        serverId: widget.printer?.serverId,
+        serverVersion: widget.printer?.serverVersion ?? 0,
+      ),
     );
     if (mounted && !widget.isFirstPrinter) Navigator.of(context).pop();
   }
@@ -408,7 +446,6 @@ class _SlotEditor extends StatefulWidget {
 }
 
 class _SlotEditorState extends State<_SlotEditor> {
-  static final _openPrintTagUrl = Uri.parse('https://openprinttag.org/');
   static const palette = <Color>[
     Color(0xFF171717),
     Color(0xFFFFFFFF),
@@ -553,6 +590,11 @@ class _SlotEditorState extends State<_SlotEditor> {
                   ),
                 ),
               ),
+            OutlinedButton.icon(
+              onPressed: _chooseCustomColor,
+              icon: const Icon(Icons.colorize),
+              label: Text(strings.customColor),
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -572,83 +614,271 @@ class _SlotEditorState extends State<_SlotEditor> {
           },
         ),
         const SizedBox(height: 12),
-        Card(
-          margin: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.nfc),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        strings.nfcTitle,
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                    ),
-                  ],
-                ),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: () => launchUrl(
-                      _openPrintTagUrl,
-                      mode: LaunchMode.externalApplication,
-                    ),
-                    icon: const Icon(Icons.open_in_new, size: 18),
-                    label: Text(strings.nfcWebsite),
-                  ),
-                ),
-                if (widget.draft.tagUid != null) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    strings.nfcLinkedTag(widget.draft.tagUid!),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  if (widget.draft.tagBrand?.isNotEmpty == true)
-                    Text(
-                      strings.nfcBrand(widget.draft.tagBrand!),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                ] else ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    strings.nfcNotLinked,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: widget.nfcBusy ? null : widget.onReadTag,
-                      icon: const Icon(Icons.download),
-                      label: Text(strings.nfcRead),
-                    ),
-                    if (widget.draft.tagUid != null)
-                      FilledButton.tonalIcon(
-                        onPressed: widget.nfcBusy ? null : widget.onWriteTag,
-                        icon: const Icon(Icons.upload),
-                        label: Text(strings.nfcWriteWeight),
-                      ),
-                  ],
-                ),
-              ],
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: widget.nfcBusy ? null : widget.onReadTag,
+              icon: const Icon(Icons.nfc),
+              label: Text(strings.nfcRead),
             ),
-          ),
+            if (widget.draft.tagUid != null)
+              FilledButton.tonalIcon(
+                onPressed: widget.nfcBusy ? null : widget.onWriteTag,
+                icon: const Icon(Icons.upload),
+                label: Text(strings.nfcWriteWeight),
+              ),
+            OutlinedButton.icon(
+              onPressed: _showDetails,
+              icon: const Icon(Icons.info_outline),
+              label: Text(strings.moreInformation),
+            ),
+          ],
         ),
       ],
     );
   }
+
+  Future<void> _chooseCustomColor() async {
+    final strings = XmlStrings.of(context);
+    var red = widget.draft.color.r;
+    var green = widget.draft.color.g;
+    var blue = widget.draft.color.b;
+    var invalidHex = false;
+    final hexController = TextEditingController(
+      text:
+          '#${(widget.draft.color.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}',
+    );
+    final result = await showDialog<Color>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final color = Color.from(
+            alpha: 1,
+            red: red,
+            green: green,
+            blue: blue,
+          );
+          final hex =
+              '#${(color.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
+          void updateChannel(VoidCallback update) {
+            setDialogState(() {
+              update();
+              invalidHex = false;
+              final value = Color.from(
+                alpha: 1,
+                red: red,
+                green: green,
+                blue: blue,
+              );
+              hexController.text =
+                  '#${(value.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
+            });
+          }
+
+          Widget slider(
+            String label,
+            double value,
+            ValueChanged<double> onChanged,
+          ) {
+            return Row(
+              children: [
+                SizedBox(width: 24, child: Text(label)),
+                Expanded(
+                  child: Slider(
+                    value: value * 255,
+                    max: 255,
+                    divisions: 255,
+                    label: (value * 255).round().toString(),
+                    onChanged: (next) => onChanged(next / 255),
+                  ),
+                ),
+                SizedBox(width: 36, child: Text('${(value * 255).round()}')),
+              ],
+            );
+          }
+
+          return AlertDialog(
+            title: Text(strings.customColor),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: hexController,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: InputDecoration(
+                    labelText: strings.hexColor,
+                    hintText: '#RRGGBB',
+                    errorText: invalidHex ? strings.invalidHexColor : null,
+                  ),
+                  onSubmitted: (value) {
+                    final match = RegExp(r'^#?([0-9A-Fa-f]{6})$')
+                        .firstMatch(value.trim());
+                    if (match == null) {
+                      setDialogState(() => invalidHex = true);
+                      return;
+                    }
+                    final rgb = int.parse(match.group(1)!, radix: 16);
+                    setDialogState(() {
+                      red = ((rgb >> 16) & 0xFF) / 255;
+                      green = ((rgb >> 8) & 0xFF) / 255;
+                      blue = (rgb & 0xFF) / 255;
+                      invalidHex = false;
+                      hexController.text = '#${match.group(1)!.toUpperCase()}';
+                    });
+                  },
+                ),
+                const SizedBox(height: 8),
+                Text(hex, style: Theme.of(context).textTheme.titleSmall),
+                slider('R', red, (value) => updateChannel(() => red = value)),
+                slider(
+                  'G',
+                  green,
+                  (value) => updateChannel(() => green = value),
+                ),
+                slider('B', blue, (value) => updateChannel(() => blue = value)),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(strings.cancel),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final match = RegExp(r'^#?([0-9A-Fa-f]{6})$')
+                      .firstMatch(hexController.text.trim());
+                  if (match == null) {
+                    setDialogState(() => invalidHex = true);
+                    return;
+                  }
+                  Navigator.pop(
+                    context,
+                    Color(0xFF000000 | int.parse(match.group(1)!, radix: 16)),
+                  );
+                },
+                child: Text(strings.save),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    hexController.dispose();
+    if (result != null) {
+      setState(() {
+        widget.draft.color = result;
+        widget.draft.colorName.text =
+            '#${(result.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
+      });
+    }
+  }
+
+  Future<void> _showDetails() async {
+    final strings = XmlStrings.of(context);
+    await showDialog<void>(
+      context: context,
+      builder: (context) => Dialog.fullscreen(
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(strings.spoolDetails),
+            leading: IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.pop(context),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(strings.save),
+              ),
+            ],
+          ),
+          body: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _detailField(widget.draft.manufacturer, strings.manufacturer),
+              _detailField(widget.draft.commercialName, strings.commercialName),
+              _detailField(
+                widget.draft.diameter,
+                strings.diameterMm,
+                numeric: true,
+              ),
+              _detailField(
+                widget.draft.originalWeight,
+                strings.originalWeight,
+                numeric: true,
+                suffix: strings.grams,
+              ),
+              _detailField(
+                widget.draft.tareWeight,
+                strings.tareWeight,
+                numeric: true,
+                suffix: strings.grams,
+              ),
+              _detailField(
+                widget.draft.purchaseDate,
+                strings.purchaseDate,
+                hint: strings.dateHint,
+              ),
+              _detailField(
+                widget.draft.storageLocation,
+                strings.storageLocation,
+              ),
+              _detailField(
+                widget.draft.storageLocationCode,
+                strings.storageLocationCode,
+              ),
+              _detailField(widget.draft.batchNumber, strings.batchNumber),
+              _detailField(widget.draft.openPrintTagId, strings.openPrintTagId),
+              _detailField(widget.draft.notes, strings.notes, lines: 4),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _detailField(
+    TextEditingController controller,
+    String label, {
+    bool numeric = false,
+    String? suffix,
+    String? hint,
+    int lines = 1,
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: TextFormField(
+      controller: controller,
+      keyboardType: numeric
+          ? const TextInputType.numberWithOptions(decimal: true)
+          : lines > 1
+          ? TextInputType.multiline
+          : TextInputType.text,
+      maxLines: lines,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        suffixText: suffix,
+      ),
+    ),
+  );
 }
 
 class _SlotDraft {
   _SlotDraft({
+    this.id,
     required this.material,
     required this.colorName,
     required this.weight,
@@ -658,6 +888,27 @@ class _SlotDraft {
     this.tagBrand,
     this.tagFullWeightGrams,
     this.tagLastReadAt,
+    required this.manufacturer,
+    required this.commercialName,
+    required this.diameter,
+    required this.originalWeight,
+    required this.tareWeight,
+    required this.purchaseDate,
+    required this.storageLocation,
+    required this.storageLocationCode,
+    required this.batchNumber,
+    required this.openPrintTagId,
+    required this.notes,
+    this.serverSlotId,
+    this.serverSlotVersion = 0,
+    this.serverMaterialId,
+    this.serverMaterialVersion = 0,
+    this.serverSpoolId,
+    this.serverSpoolVersion = 0,
+    this.serverManufacturerId,
+    this.serverManufacturerVersion = 0,
+    this.serverLocationId,
+    this.serverLocationVersion = 0,
   });
 
   factory _SlotDraft.empty() => _SlotDraft(
@@ -665,9 +916,21 @@ class _SlotDraft {
     colorName: TextEditingController(),
     weight: TextEditingController(text: '1000'),
     color: const Color(0xFF171717),
+    manufacturer: TextEditingController(),
+    commercialName: TextEditingController(),
+    diameter: TextEditingController(text: '1.75'),
+    originalWeight: TextEditingController(text: '1000'),
+    tareWeight: TextEditingController(),
+    purchaseDate: TextEditingController(),
+    storageLocation: TextEditingController(),
+    storageLocationCode: TextEditingController(),
+    batchNumber: TextEditingController(),
+    openPrintTagId: TextEditingController(),
+    notes: TextEditingController(),
   );
 
   factory _SlotDraft.fromSlot(FilamentSlot slot) => _SlotDraft(
+    id: slot.id,
     material: TextEditingController(text: slot.material),
     colorName: TextEditingController(text: slot.colorName),
     weight: TextEditingController(
@@ -681,8 +944,36 @@ class _SlotDraft {
     tagBrand: slot.tagBrand,
     tagFullWeightGrams: slot.tagFullWeightGrams,
     tagLastReadAt: slot.tagLastReadAt,
+    manufacturer: TextEditingController(text: slot.manufacturer),
+    commercialName: TextEditingController(text: slot.commercialName),
+    diameter: TextEditingController(text: slot.diameterMm.toString()),
+    originalWeight: TextEditingController(
+      text: slot.originalWeightGrams?.toString() ?? '',
+    ),
+    tareWeight: TextEditingController(
+      text: slot.tareWeightGrams?.toString() ?? '',
+    ),
+    purchaseDate: TextEditingController(
+      text: slot.purchaseDate?.toIso8601String().split('T').first ?? '',
+    ),
+    storageLocation: TextEditingController(text: slot.storageLocation),
+    storageLocationCode: TextEditingController(text: slot.storageLocationCode),
+    batchNumber: TextEditingController(text: slot.batchNumber),
+    openPrintTagId: TextEditingController(text: slot.openPrintTagId),
+    notes: TextEditingController(text: slot.notes),
+    serverSlotId: slot.serverSlotId,
+    serverSlotVersion: slot.serverSlotVersion,
+    serverMaterialId: slot.serverMaterialId,
+    serverMaterialVersion: slot.serverMaterialVersion,
+    serverSpoolId: slot.serverSpoolId,
+    serverSpoolVersion: slot.serverSpoolVersion,
+    serverManufacturerId: slot.serverManufacturerId,
+    serverManufacturerVersion: slot.serverManufacturerVersion,
+    serverLocationId: slot.serverLocationId,
+    serverLocationVersion: slot.serverLocationVersion,
   );
 
+  final int? id;
   final TextEditingController material;
   final TextEditingController colorName;
   final TextEditingController weight;
@@ -692,10 +983,46 @@ class _SlotDraft {
   String? tagBrand;
   double? tagFullWeightGrams;
   DateTime? tagLastReadAt;
+  final TextEditingController manufacturer;
+  final TextEditingController commercialName;
+  final TextEditingController diameter;
+  final TextEditingController originalWeight;
+  final TextEditingController tareWeight;
+  final TextEditingController purchaseDate;
+  final TextEditingController storageLocation;
+  final TextEditingController storageLocationCode;
+  final TextEditingController batchNumber;
+  final TextEditingController openPrintTagId;
+  final TextEditingController notes;
+  final String? serverSlotId;
+  final int serverSlotVersion;
+  final String? serverMaterialId;
+  final int serverMaterialVersion;
+  final String? serverSpoolId;
+  final int serverSpoolVersion;
+  final String? serverManufacturerId;
+  final int serverManufacturerVersion;
+  final String? serverLocationId;
+  final int serverLocationVersion;
 
   void dispose() {
     material.dispose();
     colorName.dispose();
     weight.dispose();
+    manufacturer.dispose();
+    commercialName.dispose();
+    diameter.dispose();
+    originalWeight.dispose();
+    tareWeight.dispose();
+    purchaseDate.dispose();
+    storageLocation.dispose();
+    storageLocationCode.dispose();
+    batchNumber.dispose();
+    openPrintTagId.dispose();
+    notes.dispose();
   }
+}
+
+extension on String {
+  String? get nullIfEmpty => isEmpty ? null : this;
 }

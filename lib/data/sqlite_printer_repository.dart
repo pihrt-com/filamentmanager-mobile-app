@@ -16,13 +16,19 @@ class SqlitePrinterRepository implements PrinterRepository {
     );
     _database = await openDatabase(
       databasePath,
-      version: 2,
+      version: 3,
       onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE printers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL COLLATE NOCASE UNIQUE
+            name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+            manufacturer TEXT,
+            model TEXT,
+            description TEXT,
+            status TEXT NOT NULL DEFAULT 'active',
+            server_id TEXT UNIQUE,
+            server_version INTEGER NOT NULL DEFAULT 0
           )
         ''');
         await db.execute('''
@@ -39,6 +45,27 @@ class SqlitePrinterRepository implements PrinterRepository {
             tag_brand TEXT,
             tag_full_weight_grams REAL,
             tag_last_read_at TEXT,
+            manufacturer TEXT,
+            commercial_name TEXT,
+            diameter_mm REAL NOT NULL DEFAULT 1.75,
+            original_weight_grams REAL,
+            tare_weight_grams REAL,
+            purchase_date TEXT,
+            storage_location TEXT,
+            storage_location_code TEXT,
+            batch_number TEXT,
+            openprinttag_id TEXT,
+            notes TEXT,
+            server_slot_id TEXT UNIQUE,
+            server_slot_version INTEGER NOT NULL DEFAULT 0,
+            server_material_id TEXT,
+            server_material_version INTEGER NOT NULL DEFAULT 0,
+            server_spool_id TEXT,
+            server_spool_version INTEGER NOT NULL DEFAULT 0,
+            server_manufacturer_id TEXT,
+            server_manufacturer_version INTEGER NOT NULL DEFAULT 0,
+            server_location_id TEXT,
+            server_location_version INTEGER NOT NULL DEFAULT 0,
             FOREIGN KEY (printer_id) REFERENCES printers(id) ON DELETE CASCADE
           )
         ''');
@@ -61,10 +88,17 @@ class SqlitePrinterRepository implements PrinterRepository {
             'ALTER TABLE filament_slots ADD COLUMN tag_last_read_at TEXT',
           );
         }
+        if (oldVersion < 3) {
+          for (final statement in _version3Columns) {
+            await db.execute(statement);
+          }
+        }
       },
     );
     return _database!;
   }
+
+  Future<Database> get database => _db;
 
   @override
   Future<List<PrinterRecord>> loadPrinters() async {
@@ -86,6 +120,12 @@ class SqlitePrinterRepository implements PrinterRepository {
         PrinterRecord(
           id: id,
           name: row['name']! as String,
+          manufacturer: row['manufacturer'] as String?,
+          model: row['model'] as String?,
+          description: row['description'] as String?,
+          status: row['status'] as String? ?? 'active',
+          serverId: row['server_id'] as String?,
+          serverVersion: row['server_version'] as int? ?? 0,
           slots: slotRows
               .map(
                 (slot) => FilamentSlot(
@@ -103,6 +143,35 @@ class SqlitePrinterRepository implements PrinterRepository {
                   tagLastReadAt: DateTime.tryParse(
                     slot['tag_last_read_at'] as String? ?? '',
                   ),
+                  manufacturer: slot['manufacturer'] as String?,
+                  commercialName: slot['commercial_name'] as String?,
+                  diameterMm: (slot['diameter_mm'] as num?)?.toDouble() ?? 1.75,
+                  originalWeightGrams: (slot['original_weight_grams'] as num?)
+                      ?.toDouble(),
+                  tareWeightGrams: (slot['tare_weight_grams'] as num?)
+                      ?.toDouble(),
+                  purchaseDate: DateTime.tryParse(
+                    slot['purchase_date'] as String? ?? '',
+                  ),
+                  storageLocation: slot['storage_location'] as String?,
+                  storageLocationCode: slot['storage_location_code'] as String?,
+                  batchNumber: slot['batch_number'] as String?,
+                  openPrintTagId: slot['openprinttag_id'] as String?,
+                  notes: slot['notes'] as String?,
+                  serverSlotId: slot['server_slot_id'] as String?,
+                  serverSlotVersion: slot['server_slot_version'] as int? ?? 0,
+                  serverMaterialId: slot['server_material_id'] as String?,
+                  serverMaterialVersion:
+                      slot['server_material_version'] as int? ?? 0,
+                  serverSpoolId: slot['server_spool_id'] as String?,
+                  serverSpoolVersion: slot['server_spool_version'] as int? ?? 0,
+                  serverManufacturerId:
+                      slot['server_manufacturer_id'] as String?,
+                  serverManufacturerVersion:
+                      slot['server_manufacturer_version'] as int? ?? 0,
+                  serverLocationId: slot['server_location_id'] as String?,
+                  serverLocationVersion:
+                      slot['server_location_version'] as int? ?? 0,
                 ),
               )
               .toList(),
@@ -118,14 +187,15 @@ class SqlitePrinterRepository implements PrinterRepository {
     late int printerId;
     await db.transaction((transaction) async {
       if (printer.id == null) {
-        printerId = await transaction.insert('printers', {
-          'name': printer.name,
-        });
+        printerId = await transaction.insert(
+          'printers',
+          _printerValues(printer),
+        );
       } else {
         printerId = printer.id!;
         await transaction.update(
           'printers',
-          {'name': printer.name},
+          _printerValues(printer),
           where: 'id = ?',
           whereArgs: [printerId],
         );
@@ -138,6 +208,7 @@ class SqlitePrinterRepository implements PrinterRepository {
       for (var index = 0; index < printer.slots.length; index++) {
         final slot = printer.slots[index];
         await transaction.insert('filament_slots', {
+          if (slot.id != null) 'id': slot.id,
           'printer_id': printerId,
           'position': index + 1,
           'material': slot.material,
@@ -145,6 +216,7 @@ class SqlitePrinterRepository implements PrinterRepository {
           'color_value': slot.colorValue,
           'remaining_grams': slot.remainingGrams,
           ..._tagValues(slot),
+          ..._detailValues(slot),
         });
       }
     });
@@ -164,9 +236,10 @@ class SqlitePrinterRepository implements PrinterRepository {
       await transaction.delete('filament_slots');
       await transaction.delete('printers');
       for (final printer in printers) {
-        final printerId = await transaction.insert('printers', {
-          'name': printer.name,
-        });
+        final printerId = await transaction.insert(
+          'printers',
+          _printerValues(printer),
+        );
         for (var index = 0; index < printer.slots.length; index++) {
           final slot = printer.slots[index];
           await transaction.insert('filament_slots', {
@@ -177,6 +250,7 @@ class SqlitePrinterRepository implements PrinterRepository {
             'color_value': slot.colorValue,
             'remaining_grams': slot.remainingGrams,
             ..._tagValues(slot),
+            ..._detailValues(slot),
           });
         }
       }
@@ -190,4 +264,70 @@ class SqlitePrinterRepository implements PrinterRepository {
     'tag_full_weight_grams': slot.tagFullWeightGrams,
     'tag_last_read_at': slot.tagLastReadAt?.toUtc().toIso8601String(),
   };
+
+  Map<String, Object?> _printerValues(PrinterRecord printer) => {
+    'name': printer.name,
+    'manufacturer': printer.manufacturer,
+    'model': printer.model,
+    'description': printer.description,
+    'status': printer.status,
+    'server_id': printer.serverId,
+    'server_version': printer.serverVersion,
+  };
+
+  Map<String, Object?> _detailValues(FilamentSlot slot) => {
+    'manufacturer': slot.manufacturer,
+    'commercial_name': slot.commercialName,
+    'diameter_mm': slot.diameterMm,
+    'original_weight_grams': slot.originalWeightGrams,
+    'tare_weight_grams': slot.tareWeightGrams,
+    'purchase_date': slot.purchaseDate?.toIso8601String().split('T').first,
+    'storage_location': slot.storageLocation,
+    'storage_location_code': slot.storageLocationCode,
+    'batch_number': slot.batchNumber,
+    'openprinttag_id': slot.openPrintTagId,
+    'notes': slot.notes,
+    'server_slot_id': slot.serverSlotId,
+    'server_slot_version': slot.serverSlotVersion,
+    'server_material_id': slot.serverMaterialId,
+    'server_material_version': slot.serverMaterialVersion,
+    'server_spool_id': slot.serverSpoolId,
+    'server_spool_version': slot.serverSpoolVersion,
+    'server_manufacturer_id': slot.serverManufacturerId,
+    'server_manufacturer_version': slot.serverManufacturerVersion,
+    'server_location_id': slot.serverLocationId,
+    'server_location_version': slot.serverLocationVersion,
+  };
 }
+
+const _version3Columns = <String>[
+  'ALTER TABLE printers ADD COLUMN manufacturer TEXT',
+  'ALTER TABLE printers ADD COLUMN model TEXT',
+  'ALTER TABLE printers ADD COLUMN description TEXT',
+  "ALTER TABLE printers ADD COLUMN status TEXT NOT NULL DEFAULT 'active'",
+  'ALTER TABLE printers ADD COLUMN server_id TEXT',
+  'ALTER TABLE printers ADD COLUMN server_version INTEGER NOT NULL DEFAULT 0',
+  'CREATE UNIQUE INDEX IF NOT EXISTS printers_server_id_unique ON printers(server_id)',
+  'ALTER TABLE filament_slots ADD COLUMN manufacturer TEXT',
+  'ALTER TABLE filament_slots ADD COLUMN commercial_name TEXT',
+  'ALTER TABLE filament_slots ADD COLUMN diameter_mm REAL NOT NULL DEFAULT 1.75',
+  'ALTER TABLE filament_slots ADD COLUMN original_weight_grams REAL',
+  'ALTER TABLE filament_slots ADD COLUMN tare_weight_grams REAL',
+  'ALTER TABLE filament_slots ADD COLUMN purchase_date TEXT',
+  'ALTER TABLE filament_slots ADD COLUMN storage_location TEXT',
+  'ALTER TABLE filament_slots ADD COLUMN storage_location_code TEXT',
+  'ALTER TABLE filament_slots ADD COLUMN batch_number TEXT',
+  'ALTER TABLE filament_slots ADD COLUMN openprinttag_id TEXT',
+  'ALTER TABLE filament_slots ADD COLUMN notes TEXT',
+  'ALTER TABLE filament_slots ADD COLUMN server_slot_id TEXT',
+  'ALTER TABLE filament_slots ADD COLUMN server_slot_version INTEGER NOT NULL DEFAULT 0',
+  'ALTER TABLE filament_slots ADD COLUMN server_material_id TEXT',
+  'ALTER TABLE filament_slots ADD COLUMN server_material_version INTEGER NOT NULL DEFAULT 0',
+  'ALTER TABLE filament_slots ADD COLUMN server_spool_id TEXT',
+  'ALTER TABLE filament_slots ADD COLUMN server_spool_version INTEGER NOT NULL DEFAULT 0',
+  'ALTER TABLE filament_slots ADD COLUMN server_manufacturer_id TEXT',
+  'ALTER TABLE filament_slots ADD COLUMN server_manufacturer_version INTEGER NOT NULL DEFAULT 0',
+  'ALTER TABLE filament_slots ADD COLUMN server_location_id TEXT',
+  'ALTER TABLE filament_slots ADD COLUMN server_location_version INTEGER NOT NULL DEFAULT 0',
+  'CREATE UNIQUE INDEX IF NOT EXISTS slots_server_id_unique ON filament_slots(server_slot_id)',
+];

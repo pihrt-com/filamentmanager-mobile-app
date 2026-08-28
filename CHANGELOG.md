@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.2.0 - 2026-08-28
+
+- Added optional connection to a self-hosted FilamentManager Server with secure token storage.
+- Added explicit first synchronization choices: upload to an empty server, download with a local safety backup, or merge with a duplicate-name preview.
+- Added persistent offline mutation queue, bidirectional synchronization, rotating access tokens, version conflicts, and phone/server conflict resolution.
+- Added manufacturer, commercial name, diameter, original and tare weights, purchase date, storage location, batch, OpenPrintTag ID, and notes to filament positions.
+- Added a custom RGB color picker with a live HEX preview while retaining the preset color palette.
+- Simplified NFC controls in the printer editor and retained the central OpenPrintTag link in Settings.
+- Added links to both the mobile and server GitHub repositories in Settings and README.
+- Increased the Android application version to 1.2.0 (build 4).
+
+## 1.1.0 - 2026-08-26
+
+- Added OpenPrintTag NFC-V reading and verified remaining-weight writing.
+- Added natural alphabetical and custom drag-and-drop printer sorting.
+- Displayed every loaded filament position on printer cards.
+
 ## 1.0.1 - 2026-08-25
 
 - Fixed printer cards not being rendered in portrait orientation.

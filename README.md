@@ -6,7 +6,7 @@
   <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" width="220">
 </a>
 
-Filament Manager is an offline Android application for keeping track of the filament that is currently loaded in a fleet of 3D printers. It provides a fast shop-floor overview without requiring printer integrations, user accounts, a server, or an internet connection.
+Filament Manager is an offline-first Android application for keeping track of the filament that is currently loaded in a fleet of 3D printers. It provides a fast shop-floor overview without requiring printer integrations, an account, a server, or an internet connection, while optionally synchronizing with a self-hosted [FilamentManager Server](https://github.com/pihrt-com/filamentmanager-server).
 
 The project is maintained by [Martin Pihrt](https://www.pihrt.com) and is published at [github.com/pihrt-com/filamentmanager-mobile-app](https://github.com/pihrt-com/filamentmanager-mobile-app).
 
@@ -62,6 +62,23 @@ Tapping a printer on the home screen opens its loaded-filament editor. The mater
 - Database backup, transfer, and restore.
 - Separate printer management and loaded-filament editing flows.
 - OpenPrintTag NFC-V reading and remaining-weight writing for every filament position.
+- Optional bidirectional synchronization with a self-hosted FilamentManager Server.
+- Secure Android storage for rotating server tokens; passwords are never persisted.
+- Persistent offline change queue with manual synchronization and conflict resolution.
+- Detailed spool metadata including manufacturer, commercial name, diameter, original and tare weights, purchase date, storage location, batch, OpenPrintTag ID, and notes.
+- Preset colors plus a custom RGB picker with live HEX preview.
+
+## Optional server synchronization
+
+Settings contains a **Connect to FilamentManager Server** switch. When it is disabled, the application behaves exactly as a local-only application. When enabled, the user enters the self-hosted server address, username, and password. The password is used only for sign-in; access and rotating refresh tokens are stored through Android secure storage.
+
+The first connection always asks how existing data should be handled:
+
+- **Upload phone data** is available when the server has no printers.
+- **Download server data** creates a local safety backup before replacing the phone inventory.
+- **Merge both sides** previews duplicate printer names and renames conflicting phone records before upload.
+
+Subsequent edits are saved to SQLite immediately. If the server or network is unavailable, mutations remain in a persistent queue and are uploaded during the next synchronization. Server-side web changes are then downloaded to the phone. Version conflicts are never silently overwritten; the user chooses whether the server or phone versions should win.
 
 ## Backup and transfer
 
@@ -97,7 +114,7 @@ The project can be opened directly in Android Studio with the Flutter and Dart p
 
 ## Privacy and storage
 
-Printer and filament data is stored only in the application's private SQLite database on the Android device. Filament Manager does not upload inventory or personal data. Data leaves the device only when the user explicitly exports and shares a backup.
+Printer and filament data is stored in the application's private SQLite database on the Android device. In local-only mode, Filament Manager does not upload inventory or personal data. When the user explicitly connects a FilamentManager Server, inventory changes are synchronized with that chosen server over its REST API. The password is not stored; authentication tokens use Android secure storage. Data can also leave the device when the user explicitly exports and shares a backup.
 
 ## OpenPrintTag NFC
 
@@ -113,6 +130,7 @@ assets/images/     Original application artwork
 lib/data/          SQLite repository and versioned backup format
 lib/localization/  XML localization loader
 lib/models/        Printer and filament domain models
+lib/sync/          Server API, secure authentication, offline queue, and synchronization
 lib/theme/         Light and dark Material themes
 lib/ui/            Responsive application screens
 test/              Widget, localization, import, and backup tests

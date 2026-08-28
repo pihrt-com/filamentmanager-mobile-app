@@ -22,6 +22,17 @@ void main() {
             tagBrand: 'Prusament',
             tagFullWeightGrams: 1012,
             tagLastReadAt: DateTime.utc(2026, 8, 26, 10, 30),
+            manufacturer: 'Prusa Polymers',
+            commercialName: 'Prusament PLA Galaxy Black',
+            diameterMm: 1.75,
+            originalWeightGrams: 1000,
+            tareWeightGrams: 201,
+            purchaseDate: DateTime.utc(2026, 8, 1),
+            storageLocation: 'Shelf 1',
+            storageLocationCode: '001',
+            batchNumber: 'B-2026-08',
+            openPrintTagId: 'opt-123',
+            notes: 'Dry box',
           ),
           FilamentSlot(
             id: 11,
@@ -49,6 +60,14 @@ void main() {
     expect(decoded.single.slots.first.tagUid, 'E0040108662F6FBC');
     expect(decoded.single.slots.first.tagBrand, 'Prusament');
     expect(decoded.single.slots.first.tagFullWeightGrams, 1012);
+    expect(decoded.single.slots.first.manufacturer, 'Prusa Polymers');
+    expect(
+      decoded.single.slots.first.commercialName,
+      'Prusament PLA Galaxy Black',
+    );
+    expect(decoded.single.slots.first.tareWeightGrams, 201);
+    expect(decoded.single.slots.first.storageLocationCode, '001');
+    expect(decoded.single.slots.first.openPrintTagId, 'opt-123');
     expect(
       decoded.single.slots.first.tagLastReadAt,
       DateTime.utc(2026, 8, 26, 10, 30),

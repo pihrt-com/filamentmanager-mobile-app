@@ -3,15 +3,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/printer_repository.dart';
 import 'models/printer_record.dart';
+import 'sync/filament_sync_service.dart';
 
 enum ImportMode { replace, add }
 
 enum PrinterSortMode { alphabeticalAscending, alphabeticalDescending, custom }
 
 class AppController extends ChangeNotifier {
-  AppController({required this.repository});
+  AppController({required this.repository, this.syncService});
 
   final PrinterRepository repository;
+  final FilamentSyncService? syncService;
   List<PrinterRecord> _printers = const [];
   ThemeMode _themeMode = ThemeMode.system;
   Locale? _locale;
@@ -24,6 +26,9 @@ class AppController extends ChangeNotifier {
   Locale? get locale => _locale;
   bool get isReady => _isReady;
   PrinterSortMode get printerSortMode => _printerSortMode;
+  bool get serverEnabled => syncService?.enabled ?? false;
+  bool get serverConnected => syncService?.connected ?? false;
+  bool get canEdit => !serverConnected || (syncService?.canWrite ?? true);
 
   Future<void> initialize() async {
     final preferences = await SharedPreferences.getInstance();
@@ -44,6 +49,7 @@ class AppController extends ChangeNotifier {
             .whereType<int>()
             .toList() ??
         const [];
+    await syncService?.initialize();
     _printers = await repository.loadPrinters();
     _sortPrinters();
     _isReady = true;
@@ -51,15 +57,78 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> savePrinter(PrinterRecord printer) async {
-    await repository.savePrinter(printer);
+    final previous = printer.id == null
+        ? null
+        : _printers.where((item) => item.id == printer.id).firstOrNull;
+    var saved = await repository.savePrinter(printer);
+    if (syncService?.enabled == true) {
+      saved = await syncService!.queuePrinter(saved);
+      if (previous != null) {
+        await syncService!.queueRemovedSlots(previous, saved);
+      }
+    }
     await _reloadPrinters(persistCustomOrder: true);
     notifyListeners();
   }
 
   Future<void> deletePrinter(PrinterRecord printer) async {
     if (printer.id == null) return;
+    await syncService?.queuePrinterDeletion(printer);
     await repository.deletePrinter(printer.id!);
     await _reloadPrinters(persistCustomOrder: true);
+    notifyListeners();
+  }
+
+  Future<InitialSyncPreview> connectServer({
+    required String url,
+    required String username,
+    required String password,
+    required String appVersion,
+  }) async {
+    final preview = await syncService!.connect(
+      url: url,
+      login: username,
+      password: password,
+      appVersion: appVersion,
+      localPrinters: _printers,
+    );
+    notifyListeners();
+    return preview;
+  }
+
+  Future<SyncResult> completeInitialSync(
+    InitialSyncPreview preview,
+    InitialSyncMode mode,
+  ) async {
+    final result = await syncService!.completeInitialSync(
+      preview,
+      mode,
+      _printers,
+    );
+    await _reloadPrinters(persistCustomOrder: true);
+    notifyListeners();
+    return result;
+  }
+
+  Future<SyncResult> synchronize() async {
+    final result = await syncService!.synchronize();
+    await _reloadPrinters(persistCustomOrder: true);
+    notifyListeners();
+    return result;
+  }
+
+  Future<void> resolveSyncConflicts({required bool keepPhone}) async {
+    await syncService!.resolveAllConflicts(keepPhone: keepPhone);
+    await synchronize();
+  }
+
+  Future<void> setServerEnabled(bool enabled) async {
+    await syncService?.setEnabled(enabled);
+    notifyListeners();
+  }
+
+  Future<void> disconnectServer() async {
+    await syncService?.disconnect();
     notifyListeners();
   }
 

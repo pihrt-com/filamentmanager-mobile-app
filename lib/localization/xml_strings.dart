@@ -160,6 +160,66 @@ class XmlStrings {
   String get purple => _get('purple');
   String get brown => _get('brown');
   String get chooseColor => _get('choose_color');
+  String get customColor => _get('custom_color');
+  String get hexColor => _get('hex_color');
+  String get invalidHexColor => _get('invalid_hex_color');
+  String get moreInformation => _get('more_information');
+  String get spoolDetails => _get('spool_details');
+  String get manufacturer => _get('manufacturer');
+  String get commercialName => _get('commercial_name');
+  String get diameterMm => _get('diameter_mm');
+  String get originalWeight => _get('original_weight');
+  String get tareWeight => _get('tare_weight');
+  String get purchaseDate => _get('purchase_date');
+  String get dateHint => _get('date_hint');
+  String get storageLocation => _get('storage_location');
+  String get storageLocationCode => _get('storage_location_code');
+  String get batchNumber => _get('batch_number');
+  String get openPrintTagId => _get('openprinttag_id');
+  String get notes => _get('notes');
+  String get serverSection => _get('server_section');
+  String get serverEnable => _get('server_enable');
+  String get serverEnableDescription => _get('server_enable_description');
+  String get serverUrl => _get('server_url');
+  String get serverUrlHint => _get('server_url_hint');
+  String get serverUsername => _get('server_username');
+  String get serverPassword => _get('server_password');
+  String get serverConnect => _get('server_connect');
+  String serverConnected(String user, String role) =>
+      _get('server_connected', {'user': user, 'role': role});
+  String serverVersion(String version) =>
+      _get('server_version', {'version': version});
+  String serverLastSync(String date) =>
+      _get('server_last_sync', {'date': date});
+  String get serverNeverSynced => _get('server_never_synced');
+  String serverPending(int count) => _get('server_pending', {'count': count});
+  String serverConflicts(int count) =>
+      _get('server_conflicts', {'count': count});
+  String get syncNow => _get('sync_now');
+  String get syncSuccess => _get('sync_success');
+  String syncFailed(Object message) =>
+      _get('sync_failed', {'message': message});
+  String get serverDisconnect => _get('server_disconnect');
+  String get serverGithub => _get('server_github');
+  String get serverGithubRepository => _get('server_github_repository');
+  String get initialSyncTitle => _get('initial_sync_title');
+  String initialSyncSummary(int local, int server) =>
+      _get('initial_sync_summary', {'local': local, 'server': server});
+  String get initialUpload => _get('initial_upload');
+  String get initialUploadDescription => _get('initial_upload_description');
+  String get initialDownload => _get('initial_download');
+  String get initialDownloadDescription => _get('initial_download_description');
+  String get initialMerge => _get('initial_merge');
+  String get initialMergeDescription => _get('initial_merge_description');
+  String initialConflicts(String names) =>
+      _get('initial_conflicts', {'names': names});
+  String get resolveConflictsTitle => _get('resolve_conflicts_title');
+  String resolveConflictsMessage(int count) =>
+      _get('resolve_conflicts_message', {'count': count});
+  String get keepServer => _get('keep_server');
+  String get keepPhone => _get('keep_phone');
+  String get offlineServerNote => _get('offline_server_note');
+  String get serverReadOnly => _get('server_read_only');
 }
 
 class XmlStringsDelegate extends LocalizationsDelegate<XmlStrings> {
