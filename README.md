@@ -85,7 +85,7 @@ The first connection always asks how existing data should be handled:
 - **Download server data** creates a local safety backup before replacing the phone inventory.
 - **Merge both sides** previews duplicate printer names and renames conflicting phone records before upload.
 
-Subsequent edits are saved to SQLite immediately. If the server or network is unavailable, mutations remain in a persistent queue and are uploaded during the next synchronization. Server-side web changes are then downloaded to the phone. Version conflicts are never silently overwritten; the user chooses whether the server or phone versions should win.
+Subsequent edits are saved to SQLite immediately and the application makes a non-blocking synchronization attempt after a printer is saved or deleted and after a spool is unloaded. If the server or network is unavailable, mutations remain in a persistent queue and are uploaded during the next automatic or manual synchronization. Server-side web changes are then downloaded to the phone. Version conflicts are never silently overwritten; the user chooses whether the server or phone versions should win.
 
 Pull down on the printer overview to synchronize manually. The cloud icon shows whether server synchronization is disabled, online, offline, or still being checked. Printer data and operational states synchronize in both directions, while printer ordering remains an independent display preference: the server keeps its A–Z, Z–A, or custom web order and the phone keeps its own A–Z, Z–A, or drag-and-drop order. Administrators can inspect, revoke, and remove mobile device authorizations in the server Settings page. See the server's [REST API documentation](https://github.com/pihrt-com/filamentmanager-server/blob/main/docs/API.md) for the protocol details.
 
@@ -199,9 +199,9 @@ The APK is intended for direct testing. The AAB is intended for Google Play, whe
 
 ## Version
 
-Current application version: **1.1.0 (build 3)**
+Current application version: **1.3.1 (build 10)**
 
-Release date: **2026-08-26**
+Release date: **2026-08-28**
 
 The version and release date are also visible in the application's Settings screen together with the author and source-code links.
 

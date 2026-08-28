@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.1 - 2026-08-28
+
+- Automatically attempts a non-blocking synchronization after saving or deleting a printer and after unloading a spool.
+- Keeps changes in the persistent offline queue when the server or network is unavailable, ready for the next automatic or manual synchronization.
+- Corrected the current version information in the README.
+- Increased the Android application version to 1.3.1 (build 10).
+
 ## 1.3.0 - 2026-08-28
 
 - Added pull-to-refresh synchronization to the printer overview in portrait and landscape layouts.

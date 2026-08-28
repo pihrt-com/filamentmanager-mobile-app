@@ -1,0 +1,3 @@
+<en-US>
+Added automatic synchronization after saving or deleting a printer and after unloading a spool. Offline changes remain safely queued when the server is unavailable. Filament Manager can optionally connect to the self-hosted FilamentManager Server: https://github.com/pihrt-com/filamentmanager-server
+</en-US>

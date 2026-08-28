@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -72,6 +74,7 @@ class AppController extends ChangeNotifier {
     }
     await _reloadPrinters(persistCustomOrder: true);
     notifyListeners();
+    _synchronizeQueuedChanges();
   }
 
   Future<void> deletePrinter(PrinterRecord printer) async {
@@ -80,6 +83,7 @@ class AppController extends ChangeNotifier {
     await repository.deletePrinter(printer.id!);
     await _reloadPrinters(persistCustomOrder: true);
     notifyListeners();
+    _synchronizeQueuedChanges();
   }
 
   Future<InitialSyncPreview> connectServer({
@@ -135,6 +139,7 @@ class AppController extends ChangeNotifier {
     await repository.savePrinter(printer.copyWith(slots: remaining));
     await _reloadPrinters(persistCustomOrder: true);
     notifyListeners();
+    _synchronizeQueuedChanges();
   }
 
   Future<void> resolveSyncConflicts({required bool keepPhone}) async {
@@ -145,6 +150,18 @@ class AppController extends ChangeNotifier {
       await _reloadPrinters(persistCustomOrder: true);
       notifyListeners();
     }
+  }
+
+  void _synchronizeQueuedChanges() {
+    if (!serverConnected) return;
+    unawaited(
+      synchronize().catchError(
+        (_) => SyncResult(
+          conflictCount: syncService?.conflictCount ?? 0,
+          pendingCount: syncService?.pendingCount ?? 0,
+        ),
+      ),
+    );
   }
 
   Future<void> setServerEnabled(bool enabled) async {
