@@ -7,6 +7,7 @@
 - Added localized printer operational-state badges and unavailable-card styling matching the server dashboard.
 - Added an action to unload a spool from a printer while retaining it in server inventory.
 - Removed fractional seconds from the last-synchronization time shown in Settings.
+- Updated the README with the current server relationship, synchronization controls, independent ordering behavior, administrator device management, and cross-repository documentation links.
 - Increased the Android application version to 1.3.0 (build 9).
 
 ## 1.2.4 - 2026-08-28

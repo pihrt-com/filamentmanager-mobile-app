@@ -10,6 +10,12 @@ Filament Manager is an offline-first Android application for keeping track of th
 
 The project is maintained by [Martin Pihrt](https://www.pihrt.com) and is published at [github.com/pihrt-com/filamentmanager-mobile-app](https://github.com/pihrt-com/filamentmanager-mobile-app).
 
+## FilamentManager ecosystem
+
+This repository contains the offline-first Android application, NFC/OpenPrintTag workflow, local SQLite data, import and export, and Android builds. The companion [FilamentManager Server repository](https://github.com/pihrt-com/filamentmanager-server) contains the optional self-hosted PHP server, responsive web administration, users and roles, shared inventory, backups, updates, and REST API. The mobile app works without the server; connecting both repositories' products adds secure bidirectional synchronization without removing offline operation.
+
+Use this README for Android installation, phone workflows, NFC, local data, and synchronization behavior. Use the [server README](https://github.com/pihrt-com/filamentmanager-server#readme) for hosting, installation, administrator setup, backups, updates, device access, and API documentation.
+
 ## Screenshots
 
 The screenshots below were captured from the application running on a real Android phone.
@@ -80,6 +86,8 @@ The first connection always asks how existing data should be handled:
 - **Merge both sides** previews duplicate printer names and renames conflicting phone records before upload.
 
 Subsequent edits are saved to SQLite immediately. If the server or network is unavailable, mutations remain in a persistent queue and are uploaded during the next synchronization. Server-side web changes are then downloaded to the phone. Version conflicts are never silently overwritten; the user chooses whether the server or phone versions should win.
+
+Pull down on the printer overview to synchronize manually. The cloud icon shows whether server synchronization is disabled, online, offline, or still being checked. Printer data and operational states synchronize in both directions, while printer ordering remains an independent display preference: the server keeps its A–Z, Z–A, or custom web order and the phone keeps its own A–Z, Z–A, or drag-and-drop order. Administrators can inspect, revoke, and remove mobile device authorizations in the server Settings page. See the server's [REST API documentation](https://github.com/pihrt-com/filamentmanager-server/blob/main/docs/API.md) for the protocol details.
 
 ## Backup and transfer
 
