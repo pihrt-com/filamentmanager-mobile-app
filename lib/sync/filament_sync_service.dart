@@ -309,6 +309,7 @@ class FilamentSyncService {
     }
     busy = true;
     try {
+      await _refreshServerVersion();
       var token = await _validAccessToken();
       final db = await repository.database;
       while (true) {
@@ -344,12 +345,25 @@ class FilamentSyncService {
           final type = conflict['type']?.toString();
           final id = conflict['id']?.toString();
           if (type == null || id == null) continue;
-          final pending = await db.query(
-            'sync_outbox',
-            where: 'entity_type = ? AND entity_id = ?',
-            whereArgs: [type, id],
-            limit: 1,
-          );
+          final mutationId = conflict['clientMutationId']?.toString();
+          final requestedId = conflict['requestedId']?.toString();
+          var pending = <Map<String, Object?>>[];
+          if (mutationId != null && mutationId.isNotEmpty) {
+            pending = await db.query(
+              'sync_outbox',
+              where: 'mutation_id = ?',
+              whereArgs: [mutationId],
+              limit: 1,
+            );
+          }
+          if (pending.isEmpty) {
+            pending = await db.query(
+              'sync_outbox',
+              where: 'entity_type = ? AND entity_id = ?',
+              whereArgs: [type, requestedId ?? id],
+              limit: 1,
+            );
+          }
           await db.insert('sync_conflicts', {
             'entity_type': type,
             'entity_id': id,
@@ -357,11 +371,19 @@ class FilamentSyncService {
             'server_payload': jsonEncode(conflict),
             'created_at': DateTime.now().toUtc().toIso8601String(),
           }, conflictAlgorithm: ConflictAlgorithm.replace);
-          await db.delete(
-            'sync_outbox',
-            where: 'entity_type = ? AND entity_id = ?',
-            whereArgs: [type, id],
-          );
+          if (mutationId != null && mutationId.isNotEmpty) {
+            await db.delete(
+              'sync_outbox',
+              where: 'mutation_id = ?',
+              whereArgs: [mutationId],
+            );
+          } else {
+            await db.delete(
+              'sync_outbox',
+              where: 'entity_type = ? AND entity_id = ?',
+              whereArgs: [type, requestedId ?? id],
+            );
+          }
         }
         if (_list(response['conflicts']).isNotEmpty) break;
       }
@@ -393,9 +415,16 @@ class FilamentSyncService {
     final rows = await db.query('sync_conflicts');
     for (final row in rows) {
       if (keepPhone) {
-        final local = _map(jsonDecode(row['local_payload']! as String));
         final server = _map(jsonDecode(row['server_payload']! as String));
+        var local = _map(jsonDecode(row['local_payload']! as String));
+        if ((local == null || local.isEmpty) && server != null) {
+          local = await _recoverLegacyConflict(server);
+        }
         if (local != null && server != null && local.isNotEmpty) {
+          final canonicalId = server['id']?.toString();
+          if (canonicalId != null && canonicalId.isNotEmpty) {
+            local['id'] = canonicalId;
+          }
           local['clientMutationId'] = _uuid.v4();
           local['baseVersion'] = server['serverVersion'] ?? 0;
           await db.insert('sync_outbox', {
@@ -410,7 +439,61 @@ class FilamentSyncService {
       }
     }
     await db.delete('sync_conflicts');
+    if (!keepPhone) {
+      await _downloadLatestSnapshot();
+    }
     await _refreshCounts();
+  }
+
+  Future<Map<String, dynamic>?> _recoverLegacyConflict(
+    Map<String, dynamic> server,
+  ) async {
+    if (server['type']?.toString() != 'printer_slot') return null;
+    final serverData = _map(server['serverData']);
+    final printerId = serverData?['printer_id']?.toString();
+    final position = _integer(serverData?['slot_number']);
+    if (printerId == null || position < 1) return null;
+    for (final printer in await repository.loadPrinters()) {
+      if (printer.serverId != printerId) continue;
+      for (final slot in printer.slots) {
+        if (slot.position != position) continue;
+        return {
+          'clientMutationId': _uuid.v4(),
+          'type': 'printer_slot',
+          'id': server['id'],
+          'operation': 'upsert',
+          'baseVersion': server['serverVersion'] ?? 0,
+          'data': {
+            'printer_id': printerId,
+            'slot_number': position,
+            'loaded_spool_id': slot.serverSpoolId,
+          },
+        };
+      }
+    }
+    return null;
+  }
+
+  Future<void> _refreshServerVersion() async {
+    final info = await _api.serverInfo(serverUrl);
+    serverVersion = info['version']?.toString();
+    if (serverVersion != null && serverVersion!.isNotEmpty) {
+      await _preferences!.setString('filament_server_version', serverVersion!);
+    }
+  }
+
+  Future<void> _downloadLatestSnapshot() async {
+    var token = await _validAccessToken();
+    Map<String, dynamic> snapshot;
+    try {
+      snapshot = await _api.snapshot(serverUrl, token);
+    } on FilamentServerException catch (error) {
+      if (error.statusCode != 401) rethrow;
+      token = await _refreshAccessToken();
+      snapshot = await _api.snapshot(serverUrl, token);
+    }
+    await repository.replacePrinters(_decodeSnapshot(snapshot));
+    await _markSynchronized(snapshot);
   }
 
   Future<void> disconnect() async {

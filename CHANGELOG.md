@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.4 - 2026-08-28
+
+- Fixed both conflict-resolution choices so the selected phone or server version is actually applied.
+- Preserved the original pending mutation when the server resolves a natural-key collision to its canonical entity ID.
+- Added recovery for printer-slot conflicts already stored by version 1.2.3 without their local payload.
+- Refreshed and persisted the displayed FilamentManager Server version during every synchronization.
+- Increased the Android application version to 1.2.4 (build 8).
+
 ## 1.2.3 - 2026-08-28
 
 - Distinguished an internal server error from an unreachable server during synchronization.

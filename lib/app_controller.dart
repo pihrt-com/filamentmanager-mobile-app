@@ -119,7 +119,12 @@ class AppController extends ChangeNotifier {
 
   Future<void> resolveSyncConflicts({required bool keepPhone}) async {
     await syncService!.resolveAllConflicts(keepPhone: keepPhone);
-    await synchronize();
+    if (keepPhone) {
+      await synchronize();
+    } else {
+      await _reloadPrinters(persistCustomOrder: true);
+      notifyListeners();
+    }
   }
 
   Future<void> setServerEnabled(bool enabled) async {
