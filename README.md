@@ -67,7 +67,7 @@ Tapping a printer on the home screen opens its loaded-filament editor. The mater
 - Original Filament Manager launcher icon.
 - Database backup, transfer, and restore.
 - Separate printer management and loaded-filament editing flows.
-- OpenPrintTag NFC-V reading and remaining-weight writing for every filament position.
+- Experimental OpenPrintTag NFC-V reading and remaining-weight writing for every filament position; physical Prusa spool validation is pending.
 - Optional bidirectional synchronization with a self-hosted FilamentManager Server.
 - Secure Android storage for rotating server tokens; passwords are never persisted.
 - Persistent offline change queue with manual synchronization and conflict resolution.
@@ -130,6 +130,8 @@ Printer and filament data is stored in the application's private SQLite database
 The app supports the [OpenPrintTag](https://openprinttag.org/) NFC-V (ISO 15693) format. Each filament position has its own NFC controls. Reading a compatible spool fills material, RGB color, and remaining weight and links the tag UID to that position. The remaining weight can then be written back to the linked tag.
 
 For safety, a write requires the same tag UID (and instance identifier when available), updates only the OpenPrintTag auxiliary region, and reads the tag again to verify the stored weight. Manual entry remains available for ordinary spools and phones without NFC.
+
+The codec and write-region logic pass automated tests using the official OpenPrintTag test vector. Reading and writing a physical Prusa spool has not yet been validated because the test spool is still pending; treat NFC writing as experimental until that hardware test is completed.
 
 ## Project structure
 

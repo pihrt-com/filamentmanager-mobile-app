@@ -61,7 +61,7 @@
 
 ## 1.1.0 - 2026-08-26
 
-- Added OpenPrintTag NFC-V reading and verified remaining-weight writing.
+- Added OpenPrintTag NFC-V reading and remaining-weight writing verified against the official test vector; physical Prusa spool validation remains pending.
 - Added natural alphabetical and custom drag-and-drop printer sorting.
 - Displayed every loaded filament position on printer cards.
 
