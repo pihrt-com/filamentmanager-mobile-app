@@ -192,4 +192,16 @@
     <string name="printer_status_downtime">Downtime</string>
     <string name="printer_status_fault">Fault</string>
     <string name="printer_status_inactive">Out of service</string>
+    <string name="insert_existing_spool">Insert existing spool</string>
+    <string name="insert_existing_spool_description">Choose an available spool from server inventory and load it into this printer.</string>
+    <string name="create_spool_from_tag">Create spool from tag</string>
+    <string name="create_spool_from_tag_description">Read an OpenPrintTag and use its material, color, and weight.</string>
+    <string name="create_spool_manually">Create spool manually</string>
+    <string name="create_spool_manually_description">Enter spool data and choose an existing material or create a new one.</string>
+    <string name="select_spool">Select available spool</string>
+    <string name="search_spools">Search by material, color, manufacturer, location, batch, or ID</string>
+    <string name="no_available_spools">No available spools are in server inventory.</string>
+    <string name="select_material">Choose existing material</string>
+    <string name="search_materials">Search by type, color, manufacturer, or commercial name</string>
+    <string name="no_available_materials">No materials are available from the connected server.</string>
 </resources>

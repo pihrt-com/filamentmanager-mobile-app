@@ -13,6 +13,7 @@ import '../data/backup_service.dart';
 import '../data/sqlite_printer_repository.dart';
 import '../models/filament_slot.dart';
 import '../models/printer_record.dart';
+import '../models/server_inventory.dart';
 import 'filament_server_api.dart';
 
 enum InitialSyncMode { upload, download, merge }
@@ -80,6 +81,7 @@ class FilamentSyncService {
   int conflictCount = 0;
   bool busy = false;
   ServerReachability reachability = ServerReachability.unknown;
+  ServerInventory inventory = ServerInventory.empty;
 
   bool get configured => serverUrl.isNotEmpty && username.isNotEmpty;
   bool get connected => enabled && configured && role != null;
@@ -89,6 +91,7 @@ class FilamentSyncService {
     _preferences = await SharedPreferences.getInstance();
     final db = await repository.database;
     await _ensureTables(db);
+    await _loadInventoryCache(db);
     enabled = _preferences!.getBool('filament_server_enabled') ?? false;
     serverUrl = _preferences!.getString('filament_server_url') ?? '';
     username = _preferences!.getString('filament_server_username') ?? '';
@@ -239,6 +242,12 @@ class FilamentSyncService {
     final printer = _assignIds(source);
     await repository.savePrinter(printer);
     await _queueGraph(printer);
+    for (final slot in printer.slots) {
+      final spoolId = slot.serverSpoolId;
+      if (spoolId != null) {
+        await _updateSpoolStatus(spoolId, 'loaded');
+      }
+    }
     await _refreshCounts();
     return printer;
   }
@@ -341,6 +350,9 @@ class FilamentSyncService {
           'loaded_spool_id': null,
         },
       );
+    }
+    if (spoolId != null) {
+      await _updateSpoolStatus(spoolId, 'in_stock');
     }
     await _refreshCounts();
   }
@@ -824,6 +836,13 @@ class FilamentSyncService {
   }
 
   Future<void> _markSynchronized(Map<String, dynamic> snapshot) async {
+    inventory = decodeServerInventory(snapshot);
+    final db = await repository.database;
+    await db.insert('sync_inventory_cache', {
+      'id': 1,
+      'payload': jsonEncode(snapshot),
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
     lastSyncAt = DateTime.now().toUtc();
     await _preferences!.setString(
       'filament_server_last_sync',
@@ -1000,6 +1019,44 @@ class FilamentSyncService {
         PRIMARY KEY(entity_type, entity_id)
       )
     ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sync_inventory_cache (
+        id INTEGER PRIMARY KEY CHECK(id = 1),
+        payload TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> _loadInventoryCache(Database db) async {
+    final rows = await db.query('sync_inventory_cache', where: 'id = 1');
+    if (rows.isEmpty) return;
+    try {
+      final snapshot = _map(jsonDecode(rows.first['payload']! as String));
+      if (snapshot != null) inventory = decodeServerInventory(snapshot);
+    } on FormatException {
+      await db.delete('sync_inventory_cache', where: 'id = 1');
+    }
+  }
+
+  Future<void> _updateSpoolStatus(String spoolId, String status) async {
+    inventory = inventory.withSpoolStatus(spoolId, status);
+    final db = await repository.database;
+    final rows = await db.query('sync_inventory_cache', where: 'id = 1');
+    if (rows.isEmpty) return;
+    try {
+      final snapshot = _map(jsonDecode(rows.first['payload']! as String));
+      if (snapshot == null) return;
+      for (final spool in _list(snapshot['spools'])) {
+        if (spool['id']?.toString() == spoolId) spool['status'] = status;
+      }
+      await db.update('sync_inventory_cache', {
+        'payload': jsonEncode(snapshot),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }, where: 'id = 1');
+    } on FormatException {
+      await db.delete('sync_inventory_cache', where: 'id = 1');
+    }
   }
 
   static List<Map<String, dynamic>> _list(Object? value) => value is List

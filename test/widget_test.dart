@@ -40,7 +40,11 @@ void main() {
     await tester.ensureVisible(addFilament);
     await tester.pumpAndSettle();
     await tester.tap(addFilament);
-    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.text('Create spool from tag'), findsOneWidget);
+    expect(find.text('Create spool manually'), findsOneWidget);
+    await tester.tap(find.text('Create spool manually'));
+    await tester.pumpAndSettle();
 
     final materialFields = find.widgetWithText(TextFormField, 'Material');
     final colorFields = find.widgetWithText(TextFormField, 'Color');

@@ -6,6 +6,7 @@ import '../localization/xml_strings.dart';
 import '../models/filament_materials.dart';
 import '../models/filament_slot.dart';
 import '../models/printer_record.dart';
+import '../models/server_inventory.dart';
 import '../nfc/open_print_tag.dart';
 import '../nfc/open_print_tag_nfc_service.dart';
 
@@ -54,6 +55,174 @@ class _PrinterEditorScreenState extends State<PrinterEditorScreen> {
   }
 
   void _addSlot() => setState(() => _slots.add(_SlotDraft.empty()));
+
+  Future<void> _chooseAddSlot() async {
+    final strings = XmlStrings.of(context);
+    final mode = await showModalBottomSheet<_AddSpoolMode>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.inventory_2_outlined),
+              title: Text(strings.insertExistingSpool),
+              subtitle: Text(
+                widget.controller.availableServerSpools.isEmpty
+                    ? strings.noAvailableSpools
+                    : strings.insertExistingSpoolDescription,
+              ),
+              enabled: widget.controller.availableServerSpools.isNotEmpty,
+              onTap: widget.controller.availableServerSpools.isEmpty
+                  ? null
+                  : () => Navigator.pop(context, _AddSpoolMode.existing),
+            ),
+            ListTile(
+              leading: const Icon(Icons.nfc),
+              title: Text(strings.createSpoolFromTag),
+              subtitle: Text(strings.createSpoolFromTagDescription),
+              onTap: () => Navigator.pop(context, _AddSpoolMode.tag),
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: Text(strings.createSpoolManually),
+              subtitle: Text(strings.createSpoolManuallyDescription),
+              onTap: () => Navigator.pop(context, _AddSpoolMode.manual),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || mode == null) return;
+    switch (mode) {
+      case _AddSpoolMode.existing:
+        await _selectExistingSpool();
+        return;
+      case _AddSpoolMode.tag:
+        _addSlot();
+        await _readTag(_slots.length - 1);
+        return;
+      case _AddSpoolMode.manual:
+        _addSlot();
+        return;
+    }
+  }
+
+  Future<void> _selectExistingSpool([int? index]) async {
+    final strings = XmlStrings.of(context);
+    final spool = await _pickInventoryItem<ServerSpool>(
+      title: strings.selectSpool,
+      searchHint: strings.searchSpools,
+      emptyMessage: strings.noAvailableSpools,
+      items: widget.controller.availableServerSpools,
+      label: (item) => item.label,
+    );
+    if (!mounted || spool == null) return;
+    setState(() {
+      if (index == null) {
+        _slots.add(
+          _SlotDraft.fromSlot(
+            spool.toFilamentSlot(position: _slots.length + 1),
+          ),
+        );
+      } else {
+        final previous = _slots[index];
+        final replacement = _SlotDraft.fromSlot(
+          spool.toFilamentSlot(
+            position: index + 1,
+            localId: previous.id,
+            serverSlotId: previous.serverSlotId,
+            serverSlotVersion: previous.serverSlotVersion,
+          ),
+        );
+        _slots[index] = replacement;
+        previous.dispose();
+      }
+    });
+  }
+
+  Future<void> _selectExistingMaterial(int index) async {
+    final strings = XmlStrings.of(context);
+    final material = await _pickInventoryItem<ServerMaterial>(
+      title: strings.selectMaterial,
+      searchHint: strings.searchMaterials,
+      emptyMessage: strings.noAvailableMaterials,
+      items: widget.controller.serverMaterials,
+      label: (item) => item.label,
+    );
+    if (!mounted || material == null) return;
+    setState(() => _slots[index].applyMaterial(material));
+  }
+
+  Future<T?> _pickInventoryItem<T>({
+    required String title,
+    required String searchHint,
+    required String emptyMessage,
+    required List<T> items,
+    required String Function(T item) label,
+  }) {
+    var query = '';
+    return showDialog<T>(
+      context: context,
+      builder: (context) => Dialog.fullscreen(
+        child: StatefulBuilder(
+          builder: (context, setDialogState) {
+            final normalized = query.trim().toLowerCase();
+            final filtered = normalized.isEmpty
+                ? items
+                : items
+                      .where(
+                        (item) =>
+                            label(item).toLowerCase().contains(normalized),
+                      )
+                      .toList();
+            return Scaffold(
+              appBar: AppBar(
+                title: Text(title),
+                leading: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+              body: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: TextField(
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: searchHint,
+                        prefixIcon: const Icon(Icons.search),
+                      ),
+                      onChanged: (value) => setDialogState(() => query = value),
+                    ),
+                  ),
+                  Expanded(
+                    child: filtered.isEmpty
+                        ? Center(child: Text(emptyMessage))
+                        : ListView.separated(
+                            itemCount: filtered.length,
+                            separatorBuilder: (_, _) =>
+                                const Divider(height: 1),
+                            itemBuilder: (context, itemIndex) {
+                              final item = filtered[itemIndex];
+                              return ListTile(
+                                title: Text(label(item)),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: () => Navigator.pop(context, item),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
 
   void _removeSlot(int index) {
     setState(() {
@@ -393,6 +562,20 @@ class _PrinterEditorScreenState extends State<PrinterEditorScreen> {
                                         : null,
                                     onReadTag: () => _readTag(index),
                                     onWriteTag: () => _writeTag(index),
+                                    onSelectSpool:
+                                        widget
+                                            .controller
+                                            .availableServerSpools
+                                            .isEmpty
+                                        ? null
+                                        : () => _selectExistingSpool(index),
+                                    onSelectMaterial:
+                                        widget
+                                            .controller
+                                            .serverMaterials
+                                            .isEmpty
+                                        ? null
+                                        : () => _selectExistingMaterial(index),
                                     nfcBusy: _nfcBusySlot != null,
                                   ),
                                   if (index != _slots.length - 1)
@@ -400,7 +583,7 @@ class _PrinterEditorScreenState extends State<PrinterEditorScreen> {
                                 ],
                                 const SizedBox(height: 12),
                                 OutlinedButton.icon(
-                                  onPressed: _addSlot,
+                                  onPressed: _chooseAddSlot,
                                   icon: const Icon(Icons.add),
                                   label: Text(strings.addFilament),
                                 ),
@@ -471,6 +654,8 @@ class _SlotEditor extends StatefulWidget {
     required this.onUnload,
     required this.onReadTag,
     required this.onWriteTag,
+    required this.onSelectSpool,
+    required this.onSelectMaterial,
     required this.nfcBusy,
   });
 
@@ -480,6 +665,8 @@ class _SlotEditor extends StatefulWidget {
   final VoidCallback? onUnload;
   final VoidCallback onReadTag;
   final VoidCallback onWriteTag;
+  final VoidCallback? onSelectSpool;
+  final VoidCallback? onSelectMaterial;
   final bool nfcBusy;
 
   @override
@@ -541,7 +728,32 @@ class _SlotEditorState extends State<_SlotEditor> {
           ],
         ),
         const SizedBox(height: 8),
+        if (widget.onSelectSpool != null ||
+            widget.onSelectMaterial != null) ...[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (widget.onSelectSpool != null)
+                OutlinedButton.icon(
+                  onPressed: widget.onSelectSpool,
+                  icon: const Icon(Icons.inventory_2_outlined),
+                  label: Text(strings.insertExistingSpool),
+                ),
+              if (widget.onSelectMaterial != null)
+                OutlinedButton.icon(
+                  onPressed: widget.onSelectMaterial,
+                  icon: const Icon(Icons.category_outlined),
+                  label: Text(strings.selectMaterial),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
         Autocomplete<String>(
+          key: ValueKey(
+            '${widget.draft.serverMaterialId}:${widget.draft.material.text}',
+          ),
           initialValue: TextEditingValue(text: widget.draft.material.text),
           optionsBuilder: (value) {
             final query = value.text.trim().toLowerCase();
@@ -1042,14 +1254,45 @@ class _SlotDraft {
   final TextEditingController notes;
   final String? serverSlotId;
   final int serverSlotVersion;
-  final String? serverMaterialId;
-  final int serverMaterialVersion;
-  final String? serverSpoolId;
-  final int serverSpoolVersion;
-  final String? serverManufacturerId;
-  final int serverManufacturerVersion;
-  final String? serverLocationId;
-  final int serverLocationVersion;
+  String? serverMaterialId;
+  int serverMaterialVersion;
+  String? serverSpoolId;
+  int serverSpoolVersion;
+  String? serverManufacturerId;
+  int serverManufacturerVersion;
+  String? serverLocationId;
+  int serverLocationVersion;
+
+  void applyMaterial(ServerMaterial value) {
+    material.text = value.materialType;
+    colorName.text = value.colorName;
+    color = Color(value.colorValue);
+    manufacturer.text = value.manufacturerName ?? '';
+    commercialName.text = value.commercialName ?? '';
+    diameter.text = value.diameterMm.toString();
+    serverMaterialId = value.id;
+    serverMaterialVersion = value.version;
+    serverManufacturerId = value.manufacturerId;
+    serverManufacturerVersion = value.manufacturerVersion;
+    serverSpoolId = null;
+    serverSpoolVersion = 0;
+    weight.text = '1000';
+    originalWeight.text = '1000';
+    tareWeight.clear();
+    purchaseDate.clear();
+    storageLocation.clear();
+    storageLocationCode.clear();
+    batchNumber.clear();
+    notes.clear();
+    serverLocationId = null;
+    serverLocationVersion = 0;
+    tagUid = null;
+    tagInstanceId = null;
+    tagBrand = null;
+    tagFullWeightGrams = null;
+    tagLastReadAt = null;
+    openPrintTagId.clear();
+  }
 
   void dispose() {
     material.dispose();
@@ -1068,6 +1311,8 @@ class _SlotDraft {
     notes.dispose();
   }
 }
+
+enum _AddSpoolMode { existing, tag, manual }
 
 extension on String {
   String? get nullIfEmpty => isEmpty ? null : this;

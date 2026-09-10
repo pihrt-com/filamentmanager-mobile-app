@@ -10,6 +10,15 @@ Filament Manager is an offline-first Android application for keeping track of th
 
 The project is maintained by [Martin Pihrt](https://www.pihrt.com) and is published at [github.com/pihrt-com/filamentmanager-mobile-app](https://github.com/pihrt-com/filamentmanager-mobile-app).
 
+## Recent changes
+
+### 2026-09-10 — GitHub/filamentmanager-mobile-app
+
+- Printer slots can load a specific available spool from the synchronized server inventory, including search by material, color, manufacturer, location, batch, or short spool ID.
+- Adding filament now explicitly offers an existing spool, a new spool read from OpenPrintTag, or manual creation.
+- Manual spool creation can reuse an existing synchronized material or create a new material from entered details.
+- The synchronized material and spool catalog is cached locally, and load/unload actions update availability immediately while the network synchronization finishes.
+
 ## FilamentManager ecosystem
 
 This repository contains the offline-first Android application, NFC/OpenPrintTag workflow, local SQLite data, import and export, and Android builds. The companion [FilamentManager Server repository](https://github.com/pihrt-com/filamentmanager-server) contains the optional self-hosted PHP server, responsive web administration, users and roles, shared inventory, backups, updates, and REST API. The mobile app works without the server; connecting both repositories' products adds secure bidirectional synchronization without removing offline operation.
@@ -73,6 +82,7 @@ Tapping a printer on the home screen opens its loaded-filament editor. The mater
 - Persistent offline change queue with manual synchronization and conflict resolution.
 - Pull-to-refresh synchronization, a live cloud connection indicator, printer operational-state badges, and spool unloading from printer slots.
 - Detailed spool metadata including manufacturer, commercial name, diameter, original and tare weights, purchase date, storage location, batch, OpenPrintTag ID, and notes.
+- Searchable loading of exact available server-inventory spools and reuse of existing material definitions when creating a new spool.
 - Preset colors plus a custom RGB picker with live HEX preview.
 
 ## Optional server synchronization
@@ -189,6 +199,7 @@ keyPassword=secret
 ```
 
 Never commit the keystore or signing properties. The repository `.gitignore` contains defensive rules for keystores and signing configuration.
+If `storeFile` still contains an obsolete absolute path after the signing folder is moved, the Android build safely falls back to a keystore with the same filename beside the properties file.
 
 Build release artifacts with:
 
@@ -201,9 +212,9 @@ The APK is intended for direct testing. The AAB is intended for Google Play, whe
 
 ## Version
 
-Current application version: **1.3.1 (build 10)**
+Current application version: **1.4.0 (build 11)**
 
-Release date: **2026-08-28**
+Release date: **2026-09-10**
 
 The version and release date are also visible in the application's Settings screen together with the author and source-code links.
 

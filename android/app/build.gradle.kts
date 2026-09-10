@@ -16,10 +16,19 @@ val signingProperties = Properties().apply {
         load(FileInputStream(signingPropertiesFile))
     }
 }
+val configuredStoreFile = signingProperties.getProperty("storeFile")
+val resolvedStoreFile = configuredStoreFile?.let { configuredPath ->
+    val configuredFile = File(configuredPath)
+    if (configuredFile.isFile) {
+        configuredFile
+    } else {
+        File(signingPropertiesFile.parentFile, configuredFile.name)
+    }
+}
 val releaseSigningAvailable =
     listOf("storeFile", "storePassword", "keyAlias", "keyPassword").all {
         !signingProperties.getProperty(it).isNullOrBlank()
-    }
+    } && resolvedStoreFile?.isFile == true
 
 android {
     namespace = "com.pihrt.filamentmanager.mobile"
@@ -49,7 +58,7 @@ android {
     signingConfigs {
         create("release") {
             if (releaseSigningAvailable) {
-                storeFile = file(signingProperties.getProperty("storeFile"))
+                storeFile = resolvedStoreFile
                 storePassword = signingProperties.getProperty("storePassword")
                 keyAlias = signingProperties.getProperty("keyAlias")
                 keyPassword = signingProperties.getProperty("keyPassword")

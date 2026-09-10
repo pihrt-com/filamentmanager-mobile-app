@@ -192,4 +192,16 @@
     <string name="printer_status_downtime">Odstávka</string>
     <string name="printer_status_fault">Porucha</string>
     <string name="printer_status_inactive">Mimo provoz</string>
+    <string name="insert_existing_spool">Zasunout existující cívku</string>
+    <string name="insert_existing_spool_description">Vyberte dostupnou cívku ze skladu na serveru a zaveďte ji do této tiskárny.</string>
+    <string name="create_spool_from_tag">Vytvořit cívku z tagu</string>
+    <string name="create_spool_from_tag_description">Načtěte OpenPrintTag a použijte jeho materiál, barvu a hmotnost.</string>
+    <string name="create_spool_manually">Vytvořit cívku ručně</string>
+    <string name="create_spool_manually_description">Zadejte údaje cívky a vyberte existující materiál nebo vytvořte nový.</string>
+    <string name="select_spool">Vybrat dostupnou cívku</string>
+    <string name="search_spools">Hledat podle materiálu, barvy, výrobce, umístění, šarže nebo ID</string>
+    <string name="no_available_spools">Ve skladu na serveru nejsou žádné dostupné cívky.</string>
+    <string name="select_material">Vybrat existující materiál</string>
+    <string name="search_materials">Hledat podle typu, barvy, výrobce nebo obchodního názvu</string>
+    <string name="no_available_materials">Na propojeném serveru nejsou dostupné žádné materiály.</string>
 </resources>

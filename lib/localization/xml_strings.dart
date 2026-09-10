@@ -240,6 +240,21 @@ class XmlStrings {
   String get unloadSpool => _get('unload_spool');
   String get unloadSpoolTitle => _get('unload_spool_title');
   String get unloadSpoolMessage => _get('unload_spool_message');
+  String get insertExistingSpool => _get('insert_existing_spool');
+  String get insertExistingSpoolDescription =>
+      _get('insert_existing_spool_description');
+  String get createSpoolFromTag => _get('create_spool_from_tag');
+  String get createSpoolFromTagDescription =>
+      _get('create_spool_from_tag_description');
+  String get createSpoolManually => _get('create_spool_manually');
+  String get createSpoolManuallyDescription =>
+      _get('create_spool_manually_description');
+  String get selectSpool => _get('select_spool');
+  String get searchSpools => _get('search_spools');
+  String get noAvailableSpools => _get('no_available_spools');
+  String get selectMaterial => _get('select_material');
+  String get searchMaterials => _get('search_materials');
+  String get noAvailableMaterials => _get('no_available_materials');
   String get printerStatusActive => _get('printer_status_active');
   String get printerStatusMaintenance => _get('printer_status_maintenance');
   String get printerStatusDowntime => _get('printer_status_downtime');

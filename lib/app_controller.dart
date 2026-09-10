@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'data/printer_repository.dart';
 import 'models/filament_slot.dart';
 import 'models/printer_record.dart';
+import 'models/server_inventory.dart';
 import 'sync/filament_sync_service.dart';
 
 enum ImportMode { replace, add }
@@ -34,6 +35,10 @@ class AppController extends ChangeNotifier {
   ServerReachability get serverReachability =>
       syncService?.reachability ?? ServerReachability.unknown;
   bool get canEdit => !serverConnected || (syncService?.canWrite ?? true);
+  List<ServerMaterial> get serverMaterials =>
+      syncService?.inventory.materials ?? const [];
+  List<ServerSpool> get availableServerSpools =>
+      syncService?.inventory.availableSpools ?? const [];
 
   Future<void> initialize() async {
     final preferences = await SharedPreferences.getInstance();

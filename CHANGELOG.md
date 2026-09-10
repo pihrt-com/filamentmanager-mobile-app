@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.0 - 2026-09-10
+
+- Added searchable selection of available server-inventory spools when loading a printer slot.
+- Added a clear new-spool workflow: choose an existing spool, create one from an OpenPrintTag, or enter one manually.
+- Added searchable selection of existing server materials while manually creating a spool; typing new material details still creates a new material.
+- Preserved the selected spool, material, manufacturer, location, and server version identities so synchronization moves the exact physical spool instead of creating a duplicate.
+- Cached the synchronized material and spool catalog locally and updated spool availability immediately on load and unload.
+- Added Czech and English localization and regression tests for inventory decoding, availability, and slot mapping.
+- Made release signing resilient when the external signing folder is moved but `storeFile` still contains its former absolute directory.
+- Increased the Android application version to 1.4.0 (build 11).
+
 ## 1.3.1 - 2026-08-28
 
 - Automatically attempts a non-blocking synchronization after saving or deleting a printer and after unloading a spool.
