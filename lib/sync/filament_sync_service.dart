@@ -15,6 +15,7 @@ import '../models/filament_slot.dart';
 import '../models/printer_record.dart';
 import '../models/server_inventory.dart';
 import 'filament_server_api.dart';
+import 'manufacturer_identity.dart';
 
 enum InitialSyncMode { upload, download, merge }
 
@@ -239,7 +240,7 @@ class FilamentSyncService {
 
   Future<PrinterRecord> queuePrinter(PrinterRecord source) async {
     if (!enabled || !canWrite) return source;
-    final printer = _assignIds(source);
+    final printer = _assignIds(await _reuseManufacturerIds(source));
     await repository.savePrinter(printer);
     await _queueGraph(printer);
     for (final slot in printer.slots) {
@@ -589,6 +590,35 @@ class FilamentSyncService {
     await _preferences!.setBool('filament_server_enabled', false);
     await _preferences!.remove('filament_server_role');
     await _preferences!.remove('filament_server_display_name');
+  }
+
+  Future<PrinterRecord> _reuseManufacturerIds(PrinterRecord printer) async {
+    final db = await repository.database;
+    final known = <Map<String, dynamic>>[];
+    final cache = await db.query('sync_inventory_cache', where: 'id = 1');
+    if (cache.isNotEmpty) {
+      final snapshot = _map(jsonDecode(cache.first['payload']! as String));
+      known.addAll(_list(snapshot?['manufacturers']));
+    }
+    final pending = await db.query(
+      'sync_outbox',
+      where: 'entity_type = ?',
+      whereArgs: ['manufacturer'],
+      orderBy: 'created_at',
+    );
+    for (final row in pending) {
+      final mutation = _map(jsonDecode(row['payload']! as String));
+      if (mutation?['operation'] != 'upsert') continue;
+      final data = _map(mutation?['data']);
+      known.add({
+        'id': mutation?['id'],
+        'version': mutation?['baseVersion'],
+        'name': data?['name'],
+      });
+    }
+    return printer.copyWith(
+      slots: reuseManufacturerIdentities(printer.slots, known, _uuid.v4),
+    );
   }
 
   PrinterRecord _assignIds(PrinterRecord printer) => printer.copyWith(
