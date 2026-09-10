@@ -2,8 +2,10 @@
 
 ## 1.4.1 - 2026-09-10
 
-- New spool entry reuses manufacturer UUIDs and versions from cached server inventory and queued changes. Repeated new names share one UUID. Existing spool identities remain unchanged. Install the companion server fix to recover already queued duplicate manufacturer UUIDs.
-
+- Reused manufacturer UUIDs and versions from cached server inventory and pending changes when creating spools.
+- Shared one manufacturer UUID between repeated offline entries with the same name.
+- Preserved the identities of existing physical spools and manufacturers.
+- Added regression tests for manufacturer identity reuse.
 - Increased the Android application version to 1.4.1 (build 12).
 
 ## 1.4.0 - 2026-09-10
