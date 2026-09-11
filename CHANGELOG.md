@@ -6,7 +6,7 @@
 - Shared one manufacturer UUID between repeated offline entries with the same name.
 - Preserved the identities of existing physical spools and manufacturers.
 - Added regression tests for manufacturer identity reuse.
-- Increased the Android application version to 1.4.1 (build 12).
+- Increased the Android application version to 1.4.1 (build 13); build 12 was reserved by an interrupted Google Play upload.
 
 ## 1.4.0 - 2026-09-10
 

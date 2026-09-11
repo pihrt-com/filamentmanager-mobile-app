@@ -212,7 +212,7 @@ The APK is intended for direct testing. The AAB is intended for Google Play, whe
 
 ## Version
 
-Current application version: **1.4.1 (build 12)**
+Current application version: **1.4.1 (build 13)**
 
 Release date: **2026-09-10**
 
