@@ -359,6 +359,33 @@ class _PrinterEditorScreenState extends State<PrinterEditorScreen> {
         if (tag.remainingWeightGrams != null) {
           draft.weight.text = _formatWeight(tag.remainingWeightGrams!);
         }
+        if (tag.brand?.trim().isNotEmpty == true) {
+          draft.manufacturer.text = tag.brand!.trim();
+        }
+        if (tag.materialName?.trim().isNotEmpty == true) {
+          draft.commercialName.text = tag.materialName!.trim();
+        }
+        if (tag.filamentDiameterMm != null) {
+          draft.diameter.text = _formatDecimal(tag.filamentDiameterMm!);
+        }
+        if (tag.fullWeightGrams != null) {
+          draft.originalWeight.text = _formatWeight(tag.fullWeightGrams!);
+        }
+        if (tag.emptyContainerWeightGrams != null) {
+          draft.tareWeight.text = _formatWeight(tag.emptyContainerWeightGrams!);
+        }
+        if (tag.purchaseTime != null) {
+          draft.purchaseDate.text = tag.purchaseTime!
+              .toIso8601String()
+              .split('T')
+              .first;
+        }
+        if (tag.brandSpecificInstanceId?.trim().isNotEmpty == true) {
+          draft.batchNumber.text = tag.brandSpecificInstanceId!.trim();
+        }
+        if (tag.instanceId?.trim().isNotEmpty == true) {
+          draft.openPrintTagId.text = tag.instanceId!.trim();
+        }
         draft
           ..tagUid = tag.uid
           ..tagInstanceId = tag.instanceId
@@ -474,6 +501,13 @@ class _PrinterEditorScreenState extends State<PrinterEditorScreen> {
   String _formatWeight(double value) => value == value.roundToDouble()
       ? value.toInt().toString()
       : value.toStringAsFixed(1);
+
+  String _formatDecimal(double value) => value == value.roundToDouble()
+      ? value.toInt().toString()
+      : value
+            .toStringAsFixed(3)
+            .replaceFirst(RegExp(r'0+$'), '')
+            .replaceFirst(RegExp(r'\.$'), '');
 
   String _hexColorName(int argb) =>
       '#${(argb & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';

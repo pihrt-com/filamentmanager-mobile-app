@@ -16,6 +16,10 @@ class OpenPrintTagData {
     required this.consumedWeightGrams,
     required this.remainingWeightGrams,
     required this.instanceId,
+    required this.brandSpecificInstanceId,
+    required this.emptyContainerWeightGrams,
+    required this.filamentDiameterMm,
+    required this.purchaseTime,
     required this.hasAuxRegion,
   });
 
@@ -28,6 +32,10 @@ class OpenPrintTagData {
   final double consumedWeightGrams;
   final double? remainingWeightGrams;
   final String? instanceId;
+  final String? brandSpecificInstanceId;
+  final double? emptyContainerWeightGrams;
+  final double? filamentDiameterMm;
+  final DateTime? purchaseTime;
   final bool hasAuxRegion;
 }
 
@@ -177,6 +185,8 @@ class OpenPrintTagCodec {
       final materialName = main[10] is String ? main[10] as String : null;
       final material = _materialTypes[materialType] ?? materialName ?? '';
       final instanceBytes = _asBytes(main[0]);
+      final legacyDiameter = _asDouble(main[30]);
+      final diameterMicrometers = _asDouble(main[61]);
       final data = OpenPrintTagData(
         uid: _hex(normalizedUid),
         material: material,
@@ -189,6 +199,12 @@ class OpenPrintTagCodec {
             ? null
             : (fullWeight - consumed).clamp(0, double.infinity),
         instanceId: instanceBytes?.length == 16 ? _uuid(instanceBytes!) : null,
+        brandSpecificInstanceId: main[5] is String ? main[5] as String : null,
+        emptyContainerWeightGrams: _asDouble(main[18]),
+        filamentDiameterMm: diameterMicrometers == null
+            ? legacyDiameter
+            : diameterMicrometers / 1000,
+        purchaseTime: _asDateTime(aux[5]),
         hasAuxRegion: auxRelative != null,
       );
       return OpenPrintTagDocument._(
@@ -368,6 +384,18 @@ int _nextRegionStop(int offset, int? otherOffset, int payloadLength) {
 
 int? _asInt(Object? value) => value is num ? value.toInt() : null;
 double? _asDouble(Object? value) => value is num ? value.toDouble() : null;
+DateTime? _asDateTime(Object? value) {
+  if (value is DateTime) return value.toUtc();
+  if (value is num) {
+    return DateTime.fromMillisecondsSinceEpoch(
+      (value.toDouble() * 1000).round(),
+      isUtc: true,
+    );
+  }
+  if (value is String) return DateTime.tryParse(value)?.toUtc();
+  return null;
+}
+
 Uint8List? _asBytes(Object? value) {
   if (value is Uint8List) return value;
   if (value is List<int>) return Uint8List.fromList(value);

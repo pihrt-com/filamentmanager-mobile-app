@@ -1,12 +1,15 @@
 # Changelog
 
-## 1.4.1 - 2026-09-10
+## 1.4.1 - 2026-09-11
 
 - Reused manufacturer UUIDs and versions from cached server inventory and pending changes when creating spools.
 - Shared one manufacturer UUID between repeated offline entries with the same name.
 - Preserved the identities of existing physical spools and manufacturers.
 - Added regression tests for manufacturer identity reuse.
-- Increased the Android application version to 1.4.1 (build 14); builds 12 and 13 were reserved by interrupted Google Play uploads.
+- Imported manufacturer, commercial name, empty-spool weight, purchase date, brand-specific instance ID, and OpenPrintTag UUID from NFC tags into spool details.
+- Added both legacy millimetre and current micrometre OpenPrintTag filament-diameter decoding.
+- Kept remaining-weight writes restricted to the linked tag and verified every write by reading the tag back.
+- Increased the Android application version to 1.4.1 (build 15); builds 12 and 13 were reserved by interrupted Google Play uploads, and build 14 was superseded before submission.
 
 ## 1.4.0 - 2026-09-10
 

@@ -70,7 +70,7 @@
     <string name="nfc_hold_near">Přiložte telefon k tagu</string>
     <string name="nfc_scan_read_message">Držte cívku OpenPrintTag u telefonu, dokud se údaje nenačtou.</string>
     <string name="nfc_scan_write_message">Držte stejnou cívku OpenPrintTag u telefonu až do dokončení zápisu a kontroly.</string>
-    <string name="nfc_read_success">Materiál, barva a zbývající hmotnost byly načteny z tagu.</string>
+    <string name="nfc_read_success">Všechny dostupné údaje o materiálu a cívce byly načteny z tagu.</string>
     <string name="nfc_write_success">Zbývající hmotnost byla zapsána do tagu a ověřena.</string>
     <string name="nfc_read_first">Před zápisem nejprve načtěte a přiřaďte OpenPrintTag.</string>
     <string name="nfc_write_title">Zapsat zbývající hmotnost?</string>

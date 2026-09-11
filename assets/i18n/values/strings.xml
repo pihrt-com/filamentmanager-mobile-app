@@ -70,7 +70,7 @@
     <string name="nfc_hold_near">Hold the phone near the tag</string>
     <string name="nfc_scan_read_message">Keep the OpenPrintTag spool close to the phone until it is read.</string>
     <string name="nfc_scan_write_message">Keep the same OpenPrintTag spool close until writing and verification finish.</string>
-    <string name="nfc_read_success">Material, color, and remaining weight were read from the tag.</string>
+    <string name="nfc_read_success">All available material and spool details were read from the tag.</string>
     <string name="nfc_write_success">Remaining weight was written to the tag and verified.</string>
     <string name="nfc_read_first">Read and link an OpenPrintTag before writing.</string>
     <string name="nfc_write_title">Write remaining weight?</string>

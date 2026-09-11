@@ -137,11 +137,11 @@ Printer and filament data is stored in the application's private SQLite database
 
 ## OpenPrintTag NFC
 
-The app supports the [OpenPrintTag](https://openprinttag.org/) NFC-V (ISO 15693) format. Each filament position has its own NFC controls. Reading a compatible spool fills material, RGB color, and remaining weight and links the tag UID to that position. The remaining weight can then be written back to the linked tag.
+The app supports the [OpenPrintTag](https://openprinttag.org/) NFC-V (ISO 15693) format. Each filament position has its own NFC controls. Reading a compatible spool imports all available supported data: material, commercial name, manufacturer, RGB color, remaining and original net weights, empty-spool weight, filament diameter, purchase date from the user auxiliary region, brand-specific instance ID, and OpenPrintTag UUID. The tag UID is linked to that position, after which the remaining weight can be written back to the same tag.
 
 For safety, a write requires the same tag UID (and instance identifier when available), updates only the OpenPrintTag auxiliary region, and reads the tag again to verify the stored weight. Manual entry remains available for ordinary spools and phones without NFC.
 
-The codec and write-region logic pass automated tests using the official OpenPrintTag test vector. Reading and writing a physical Prusa spool has not yet been validated because the test spool is still pending; treat NFC writing as experimental until that hardware test is completed.
+The codec and write-region logic pass automated tests using the official OpenPrintTag test vector and an extended metadata vector. A physical tag has been confirmed to read the basic material, color, and weight fields. Treat NFC writing as experimental until the updated build is retested against the physical spool.
 
 ## Project structure
 
@@ -212,9 +212,9 @@ The APK is intended for direct testing. The AAB is intended for Google Play, whe
 
 ## Version
 
-Current application version: **1.4.1 (build 14)**
+Current application version: **1.4.1 (build 15)**
 
-Release date: **2026-09-10**
+Release date: **2026-09-11**
 
 The version and release date are also visible in the application's Settings screen together with the author and source-code links.
 
