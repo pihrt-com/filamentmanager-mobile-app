@@ -212,9 +212,9 @@ The APK is intended for direct testing. The AAB is intended for Google Play, whe
 
 ## Version
 
-Current application version: **1.4.1 (build 15)**
+Current application version: **1.4.2 (build 16)**
 
-Release date: **2026-09-11**
+Release date: **2026-09-15**
 
 The version and release date are also visible in the application's Settings screen together with the author and source-code links.
 

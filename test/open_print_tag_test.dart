@@ -46,6 +46,19 @@ void main() {
     expect(document.data.remainingWeightGrams, 500);
   });
 
+  test('ignores malformed optional numbers without losing core tag data', () {
+    final document = const OpenPrintTagCodec().decode(
+      _completeTagMemory(double.infinity, diameter: double.infinity),
+      Uint8List.fromList([0xE0, 0x04, 0x01, 0x08, 0x66, 0x2F, 0x6F, 0xBC]),
+    );
+
+    expect(document.data.material, 'PLA');
+    expect(document.data.brand, 'Prusament');
+    expect(document.data.remainingWeightGrams, 500);
+    expect(document.data.filamentDiameterMm, isNull);
+    expect(document.data.purchaseTime, isNull);
+  });
+
   test('updates only blocks inside the official auxiliary region', () {
     final memory = File('test/fixtures/openprinttag_01.bin').readAsBytesSync();
     final document = const OpenPrintTagCodec().decode(
@@ -72,7 +85,7 @@ void main() {
   });
 }
 
-Uint8List _completeTagMemory(DateTime purchaseTime) {
+Uint8List _completeTagMemory(Object purchaseTime, {Object diameter = 1750}) {
   final main = _cbor.encode({
     0: Uint8List.fromList(List<int>.generate(16, (index) => index)),
     5: 'LOT-2026-09',
@@ -82,11 +95,13 @@ Uint8List _completeTagMemory(DateTime purchaseTime) {
     17: 1012,
     18: 201,
     19: Uint8List.fromList([0x3D, 0x3E, 0x3D]),
-    61: 1750,
+    61: diameter,
   });
   final aux = _cbor.encode({
     0: 512,
-    5: purchaseTime.millisecondsSinceEpoch ~/ 1000,
+    5: purchaseTime is DateTime
+        ? purchaseTime.millisecondsSinceEpoch ~/ 1000
+        : purchaseTime,
   });
   const mainOffset = 16;
   const mainSize = 160;

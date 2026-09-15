@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.2 - 2026-09-15
+
+- Fixed OpenPrintTag reads that could close silently when an optional numeric field contained a non-finite or otherwise invalid value.
+- Preserved valid core spool data when malformed optional OpenPrintTag values are present.
+- Added a localized invalid-tag message for unexpected NFC decoding failures instead of dismissing the scan dialog without feedback.
+- Added a regression test covering malformed optional purchase-date and filament-diameter values.
+- Increased the Android application version to 1.4.2 (build 16).
+
 ## 1.4.1 - 2026-09-11
 
 - Reused manufacturer UUIDs and versions from cached server inventory and pending changes when creating spools.

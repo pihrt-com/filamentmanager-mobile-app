@@ -27,7 +27,7 @@ class SettingsScreen extends StatelessWidget {
   );
   static final _authorUrl = Uri.parse('https://www.pihrt.com');
   static final _openPrintTagUrl = Uri.parse('https://openprinttag.org/');
-  static const _releaseDate = '2026-09-11';
+  static const _releaseDate = '2026-09-15';
 
   final AppController controller;
 

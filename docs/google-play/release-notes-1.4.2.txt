@@ -1,0 +1,6 @@
+<en-US>
+Fixed an NFC issue where some OpenPrintTag scans could close without importing data or showing an error. Valid spool data is now preserved when an optional tag value is malformed, and unexpected decoding failures display a clear message.
+</en-US>
+<cs-CZ>
+Opravili jsme chybu NFC, při které se některé OpenPrintTag tagy zavřely bez načtení dat a bez chybové hlášky. Platná data cívky se nyní zachovají i při vadné volitelné hodnotě a neočekávaná chyba dekódování zobrazí srozumitelné upozornění.
+</cs-CZ>

@@ -396,6 +396,8 @@ class _PrinterEditorScreenState extends State<PrinterEditorScreen> {
       _message(strings.nfcReadSuccess);
     } on OpenPrintTagException catch (error) {
       if (mounted) _message(_nfcError(strings, error.error));
+    } catch (_) {
+      if (mounted) _message(strings.nfcInvalidTag);
     } finally {
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop();

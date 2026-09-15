@@ -382,15 +382,32 @@ int _nextRegionStop(int offset, int? otherOffset, int payloadLength) {
   return candidates.first;
 }
 
-int? _asInt(Object? value) => value is num ? value.toInt() : null;
-double? _asDouble(Object? value) => value is num ? value.toDouble() : null;
+int? _asInt(Object? value) {
+  if (value is int) return value;
+  if (value is! num) return null;
+  final result = value.toDouble();
+  return result.isFinite ? result.toInt() : null;
+}
+
+double? _asDouble(Object? value) {
+  if (value is! num) return null;
+  final result = value.toDouble();
+  return result.isFinite ? result : null;
+}
+
 DateTime? _asDateTime(Object? value) {
   if (value is DateTime) return value.toUtc();
   if (value is num) {
-    return DateTime.fromMillisecondsSinceEpoch(
-      (value.toDouble() * 1000).round(),
-      isUtc: true,
-    );
+    final seconds = value.toDouble();
+    if (!seconds.isFinite) return null;
+    try {
+      return DateTime.fromMillisecondsSinceEpoch(
+        (seconds * 1000).round(),
+        isUtc: true,
+      );
+    } on ArgumentError {
+      return null;
+    }
   }
   if (value is String) return DateTime.tryParse(value)?.toUtc();
   return null;
