@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.5.0 - 2026-11-22
+
+- Updated the Android target and compile SDK to Android 17 (API level 37).
+- Added the Android 17 runtime local-network permission required for direct synchronization with private FilamentManager Server installations.
+- Added Restore Credentials support so an optional server sign-in can be restored during transfer to a new Android phone.
+- Added Digital Asset Links integration for `pihrt.com` and server-side WebAuthn registration and authentication.
+- Excluded Android secure token storage from device backup while preserving the non-secret server information needed for credential restoration.
+- Enabled R8 code and resource shrinking for release builds.
+- Updated Android Gradle Plugin, Gradle, and AndroidX Credential Manager dependencies for API 37.
+- Added server API, cryptographic, replay-protection, signing-origin, and localization regression coverage.
+- Increased the Android application version to 1.5.0 (build 17).
+
 ## 1.4.2 - 2026-09-15
 
 - Fixed OpenPrintTag reads that could close silently when an optional numeric field contained a non-finite or otherwise invalid value.

@@ -162,6 +162,7 @@
     <string name="server_invalid_address">Adresa serveru není platná. Uveďte https:// a úplnou cestu k FilamentManageru.</string>
     <string name="server_request_rejected">Server požadavek odmítl. Zkontrolujte oprávnění účtu a verzi serveru.</string>
     <string name="server_connection_failed">Spojení se serverem selhalo. Zkontrolujte adresu, internetové připojení a dostupnost serveru.</string>
+    <string name="server_local_network_denied">Pro připojení k soukromému FilamentManager Serveru povolte přístup k místní síti.</string>
     <string name="server_disconnect">Odpojit účet</string>
     <string name="server_github">FilamentManager Server na GitHubu</string>
     <string name="server_github_repository">github.com/pihrt-com/filamentmanager-server</string>

@@ -7,10 +7,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-val signingPropertiesFile = File(
+val defaultSigningPropertiesFile = File(
     System.getProperty("user.home"),
     "android-keys/filamentmanager-mobile-signing.properties",
 )
+val signingPropertiesFile = System.getenv("FILAMENTMANAGER_SIGNING_PROPERTIES")
+    ?.takeIf { it.isNotBlank() }
+    ?.let(::File)
+    ?: defaultSigningPropertiesFile
 val signingProperties = Properties().apply {
     if (signingPropertiesFile.isFile) {
         load(FileInputStream(signingPropertiesFile))
@@ -32,7 +36,7 @@ val releaseSigningAvailable =
 
 android {
     namespace = "com.pihrt.filamentmanager.mobile"
-    compileSdk = 36
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -46,7 +50,7 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 31
-        targetSdk = 36
+        targetSdk = 37
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
         // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
         // You can force using the value of versionCode by specifying the `-P force-version-code-ignoring-abi=true`
@@ -71,8 +75,20 @@ android {
             if (releaseSigningAvailable) {
                 signingConfig = signingConfigs.getByName("release")
             }
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
+}
+
+dependencies {
+    implementation("androidx.credentials:credentials:1.7.0-alpha03")
+    implementation("androidx.credentials:credentials-play-services-auth:1.7.0-alpha03")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
 }
 
 kotlin {

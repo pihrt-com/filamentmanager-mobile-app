@@ -162,6 +162,7 @@
     <string name="server_invalid_address">The server address is invalid. Include https:// and the full FilamentManager path.</string>
     <string name="server_request_rejected">The server rejected the request. Check the account permissions and server version.</string>
     <string name="server_connection_failed">The server connection failed. Check the address, internet connection, and server availability.</string>
+    <string name="server_local_network_denied">Allow nearby network access to connect to a private FilamentManager Server.</string>
     <string name="server_disconnect">Disconnect account</string>
     <string name="server_github">FilamentManager Server on GitHub</string>
     <string name="server_github_repository">github.com/pihrt-com/filamentmanager-server</string>

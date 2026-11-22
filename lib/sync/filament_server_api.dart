@@ -7,6 +7,7 @@ enum FilamentServerErrorKind {
   invalidAddress,
   authenticationRequired,
   invalidResponse,
+  localNetworkPermissionDenied,
 }
 
 class FilamentServerException implements Exception {
@@ -75,6 +76,59 @@ class FilamentServerApi {
         '/api/v1/auth/refresh',
         body: {'refreshToken': refreshToken},
       );
+
+  Future<Map<String, dynamic>> restoreRegistrationOptions(
+    String baseUrl,
+    String accessToken,
+  ) => _request(
+    'POST',
+    baseUrl,
+    '/api/v1/auth/restore/registration/options',
+    accessToken: accessToken,
+  );
+
+  Future<void> completeRestoreRegistration(
+    String baseUrl,
+    String accessToken,
+    String credentialJson,
+  ) async {
+    await _request(
+      'POST',
+      baseUrl,
+      '/api/v1/auth/restore/registration/complete',
+      accessToken: accessToken,
+      body: {'credential': jsonDecode(credentialJson)},
+    );
+  }
+
+  Future<Map<String, dynamic>> restoreAuthenticationOptions(
+    String baseUrl,
+    String userId,
+  ) => _request(
+    'POST',
+    baseUrl,
+    '/api/v1/auth/restore/authentication/options',
+    body: {'userId': userId},
+  );
+
+  Future<Map<String, dynamic>> completeRestoreAuthentication(
+    String baseUrl, {
+    required String userId,
+    required String credentialJson,
+    required String appVersion,
+    required String deviceId,
+  }) => _request(
+    'POST',
+    baseUrl,
+    '/api/v1/auth/restore/authentication/complete',
+    body: {
+      'userId': userId,
+      'credential': jsonDecode(credentialJson),
+      'deviceName': 'FilamentManager Android',
+      'appVersion': appVersion,
+      'deviceId': deviceId,
+    },
+  );
 
   Future<Map<String, dynamic>> snapshot(String baseUrl, String accessToken) =>
       _request('GET', baseUrl, '/api/v1/snapshot', accessToken: accessToken);

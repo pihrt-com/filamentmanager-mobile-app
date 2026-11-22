@@ -1,0 +1,6 @@
+<en-US>
+Updated for Android 17. Private-server synchronization now requests local-network access when required, and an optional FilamentManager Server sign-in can be restored when transferring the app to a new phone. Release builds now use R8 code and resource optimization.
+</en-US>
+<cs-CZ>
+Aktualizace pro Android 17. Synchronizace se soukromým serverem nyní podle potřeby požádá o přístup k místní síti a volitelné přihlášení k FilamentManager Serveru lze obnovit při přenosu aplikace na nový telefon. Vydání používá optimalizaci kódu a prostředků R8.
+</cs-CZ>

@@ -79,6 +79,7 @@ Tapping a printer on the home screen opens its loaded-filament editor. The mater
 - Experimental OpenPrintTag NFC-V reading and remaining-weight writing for every filament position; physical Prusa spool validation is pending.
 - Optional bidirectional synchronization with a self-hosted FilamentManager Server.
 - Secure Android storage for rotating server tokens; passwords are never persisted.
+- Android Restore Credentials support for restoring an optional FilamentManager Server sign-in when the app is transferred to a new phone.
 - Persistent offline change queue with manual synchronization and conflict resolution.
 - Pull-to-refresh synchronization, a live cloud connection indicator, printer operational-state badges, and spool unloading from printer slots.
 - Detailed spool metadata including manufacturer, commercial name, diameter, original and tare weights, purchase date, storage location, batch, OpenPrintTag ID, and notes.
@@ -88,6 +89,8 @@ Tapping a printer on the home screen opens its loaded-filament editor. The mater
 ## Optional server synchronization
 
 Settings contains a **Connect to FilamentManager Server** switch. When it is disabled, the application behaves exactly as a local-only application. When enabled, the user enters the self-hosted server address, username, and password. The password is used only for sign-in; access and rotating refresh tokens are stored through Android secure storage.
+
+After a successful sign-in to a compatible server, Android Credential Manager creates a restore credential scoped to `pihrt.com` and the Google Play signing certificate. During transfer to a new phone, ordinary Android backup restores only the non-secret server address and user identifier; encrypted access tokens are explicitly excluded because they are bound to the old phone's Android Keystore. The app then uses Restore Credentials to establish a fresh server session without restoring the password. Manual sign-in remains available when the credential provider, backup, or server support is unavailable.
 
 The first connection always asks how existing data should be handled:
 
@@ -126,7 +129,7 @@ The application follows the phone language by default. English or Czech can be s
 ## Supported Android versions
 
 - Minimum: Android 12 (API level 31)
-- Target: Android 16 (API level 36, latest stable API at the time of release)
+- Target: Android 17 (API level 37)
 - Package ID: `com.pihrt.filamentmanager.mobile`
 
 The project can be opened directly in Android Studio with the Flutter and Dart plugins installed. Open the repository root using **File > Open**.
@@ -164,8 +167,8 @@ Requirements:
 
 - Flutter 3.47.1 or newer compatible stable release;
 - Android Studio with Flutter and Dart plugins;
-- Android SDK platform 36;
-- Java 17 or the runtime bundled with Android Studio.
+- Android SDK platform 37;
+- Java 21 or the runtime bundled with a current Android Studio release.
 
 Install dependencies and run the checks:
 
@@ -188,6 +191,8 @@ Release signing is intentionally kept outside the Git repository. The Android bu
 ```text
 %USERPROFILE%/android-keys/filamentmanager-mobile-signing.properties
 ```
+
+For a signing file stored elsewhere, set `FILAMENTMANAGER_SIGNING_PROPERTIES` to its absolute path for the build process. The file and keystore remain outside the repository.
 
 Expected keys:
 
@@ -212,9 +217,9 @@ The APK is intended for direct testing. The AAB is intended for Google Play, whe
 
 ## Version
 
-Current application version: **1.4.2 (build 16)**
+Current application version: **1.5.0 (build 17)**
 
-Release date: **2026-09-15**
+Release date: **2026-11-22**
 
 The version and release date are also visible in the application's Settings screen together with the author and source-code links.
 

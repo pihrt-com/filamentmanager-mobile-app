@@ -27,7 +27,7 @@ class SettingsScreen extends StatelessWidget {
   );
   static final _authorUrl = Uri.parse('https://www.pihrt.com');
   static final _openPrintTagUrl = Uri.parse('https://openprinttag.org/');
-  static const _releaseDate = '2026-09-15';
+  static const _releaseDate = '2026-11-22';
 
   final AppController controller;
 
@@ -716,6 +716,9 @@ class _ServerSettingsCardState extends State<_ServerSettingsCard> {
       }
       if (error.kind == FilamentServerErrorKind.invalidResponse) {
         return strings.serverInvalidResponse;
+      }
+      if (error.kind == FilamentServerErrorKind.localNetworkPermissionDenied) {
+        return strings.serverLocalNetworkDenied;
       }
       final status = error.statusCode;
       if (status == 401) {

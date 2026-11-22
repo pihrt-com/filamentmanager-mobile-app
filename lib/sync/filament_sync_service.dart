@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
@@ -14,6 +15,7 @@ import '../data/sqlite_printer_repository.dart';
 import '../models/filament_slot.dart';
 import '../models/printer_record.dart';
 import '../models/server_inventory.dart';
+import '../platform/android_services.dart';
 import 'filament_server_api.dart';
 import 'manufacturer_identity.dart';
 
@@ -47,7 +49,9 @@ class FilamentSyncService {
     required this.repository,
     FilamentServerApi? api,
     FlutterSecureStorage? secureStorage,
+    AndroidServices? androidServices,
   }) : _api = api ?? FilamentServerApi(),
+       _androidServices = androidServices ?? const AndroidServices(),
        _secure =
            secureStorage ??
            const FlutterSecureStorage(
@@ -60,10 +64,14 @@ class FilamentSyncService {
   static const _uuid = Uuid();
   static const _sessionKey = 'filament_server_session';
   static const _deviceIdKey = 'filament_server_device_id';
+  static const _restoreCredentialSyncedKey =
+      'filament_server_restore_credential_synced';
+  static const _serverUserIdKey = 'filament_server_user_id';
 
   final SqlitePrinterRepository repository;
   final FilamentServerApi _api;
   final FlutterSecureStorage _secure;
+  final AndroidServices _androidServices;
   SharedPreferences? _preferences;
   Future<SyncResult>? _activeSynchronization;
   Future<String>? _activeTokenRefresh;
@@ -104,7 +112,15 @@ class FilamentSyncService {
       _deviceId = _uuid.v4();
       await _preferences!.setString(_deviceIdKey, _deviceId);
     }
-    final storedSession = await _loadTokenPair();
+    var storedSession = await _loadTokenPair();
+    if (enabled && configured && storedSession == null) {
+      try {
+        await _restoreSession();
+        storedSession = await _loadTokenPair();
+      } on Object {
+        // Restore Credentials is best-effort; manual sign-in remains available.
+      }
+    }
     if (enabled && role != null && storedSession == null) {
       role = null;
       displayName = null;
@@ -115,6 +131,9 @@ class FilamentSyncService {
       _preferences!.getString('filament_server_last_sync') ?? '',
     );
     await _refreshCounts();
+    if (enabled && configured && storedSession != null) {
+      unawaited(_ensureRestoreCredential().catchError((Object _) {}));
+    }
   }
 
   Future<void> setEnabled(bool value) async {
@@ -132,6 +151,7 @@ class FilamentSyncService {
     busy = true;
     try {
       final normalized = _api.normalizeBaseUrl(url);
+      await _ensureNetworkAccess(normalized);
       final info = await _api.serverInfo(normalized);
       final auth = await _api.login(
         normalized,
@@ -141,10 +161,12 @@ class FilamentSyncService {
         deviceId: _deviceId,
       );
       await _storeTokenPair(auth);
+      await _preferences!.setBool(_restoreCredentialSyncedKey, false);
       serverUrl = normalized;
       username = login.trim();
       serverVersion = info['version']?.toString();
       final user = _map(auth['user']);
+      final userId = user?['id']?.toString();
       role = user?['role']?.toString();
       displayName = user?['displayName']?.toString();
       enabled = true;
@@ -160,11 +182,20 @@ class FilamentSyncService {
       if (role != null) {
         await _preferences!.setString('filament_server_role', role!);
       }
+      if (userId != null && userId.isNotEmpty) {
+        await _preferences!.setString(_serverUserIdKey, userId);
+      }
       if (displayName != null) {
         await _preferences!.setString(
           'filament_server_display_name',
           displayName!,
         );
+      }
+      try {
+        await _ensureRestoreCredential();
+      } on Object {
+        // Older servers and unavailable credential providers must not block
+        // an otherwise successful manual sign-in.
       }
       final snapshot = await _api.snapshot(normalized, await _accessToken());
       reachability = ServerReachability.online;
@@ -380,6 +411,7 @@ class FilamentSyncService {
     }
     busy = true;
     try {
+      await _ensureNetworkAccess();
       await _refreshServerVersion();
       var token = await _validAccessToken();
       final db = await repository.database;
@@ -581,6 +613,11 @@ class FilamentSyncService {
       }
     }
     await _secure.delete(key: _sessionKey);
+    try {
+      await _androidServices.clearRestoreCredential();
+    } on Object {
+      // Local disconnection must not depend on a credential provider.
+    }
     _accessTokenCache = null;
     _refreshTokenCache = null;
     enabled = false;
@@ -590,6 +627,75 @@ class FilamentSyncService {
     await _preferences!.setBool('filament_server_enabled', false);
     await _preferences!.remove('filament_server_role');
     await _preferences!.remove('filament_server_display_name');
+    await _preferences!.remove(_restoreCredentialSyncedKey);
+    await _preferences!.remove(_serverUserIdKey);
+  }
+
+  Future<void> _ensureNetworkAccess([String? url]) async {
+    if (!requiresLocalNetworkAccess(url ?? serverUrl)) return;
+    if (await _androidServices.requestLocalNetworkAccess()) return;
+    throw const FilamentServerException(
+      'Local network access was not allowed.',
+      kind: FilamentServerErrorKind.localNetworkPermissionDenied,
+    );
+  }
+
+  Future<void> _ensureRestoreCredential() async {
+    if (_preferences!.getBool(_restoreCredentialSyncedKey) == true) return;
+    await _ensureNetworkAccess();
+    final accessToken = await _validAccessToken();
+    final options = await _api.restoreRegistrationOptions(
+      serverUrl,
+      accessToken,
+    );
+    final userId = options['userId']?.toString();
+    if (userId != null && userId.isNotEmpty) {
+      await _preferences!.setString(_serverUserIdKey, userId);
+    }
+    final requestJson = options['requestJson']?.toString();
+    if (requestJson == null || requestJson.isEmpty) {
+      throw const FilamentServerException(
+        'Restore credential registration options are missing.',
+        kind: FilamentServerErrorKind.invalidResponse,
+      );
+    }
+    final credential = await _androidServices.createRestoreCredential(
+      requestJson,
+    );
+    await _api.completeRestoreRegistration(serverUrl, accessToken, credential);
+    await _preferences!.setBool(_restoreCredentialSyncedKey, true);
+  }
+
+  Future<void> _restoreSession() async {
+    await _ensureNetworkAccess();
+    final userId = _preferences!.getString(_serverUserIdKey);
+    if (userId == null || userId.isEmpty) return;
+    final options = await _api.restoreAuthenticationOptions(serverUrl, userId);
+    final requestJson = options['requestJson']?.toString();
+    if (requestJson == null || requestJson.isEmpty) return;
+    final credential = await _androidServices.getRestoreCredential(requestJson);
+    final package = await PackageInfo.fromPlatform();
+    final auth = await _api.completeRestoreAuthentication(
+      serverUrl,
+      userId: userId,
+      credentialJson: credential,
+      appVersion: package.version,
+      deviceId: _deviceId,
+    );
+    await _storeTokenPair(auth);
+    final user = _map(auth['user']);
+    role = user?['role']?.toString();
+    displayName = user?['displayName']?.toString();
+    if (role != null) {
+      await _preferences!.setString('filament_server_role', role!);
+    }
+    if (displayName != null) {
+      await _preferences!.setString(
+        'filament_server_display_name',
+        displayName!,
+      );
+    }
+    await _preferences!.setBool(_restoreCredentialSyncedKey, true);
   }
 
   Future<PrinterRecord> _reuseManufacturerIds(PrinterRecord printer) async {
@@ -945,7 +1051,20 @@ class FilamentSyncService {
         kind: FilamentServerErrorKind.authenticationRequired,
       );
     }
-    final auth = await _api.refresh(serverUrl, refresh);
+    late final Map<String, dynamic> auth;
+    try {
+      auth = await _api.refresh(serverUrl, refresh);
+    } on FilamentServerException catch (error) {
+      if (error.statusCode == 401) {
+        try {
+          await _androidServices.clearRestoreCredential();
+        } on Object {
+          // Preserve the original authentication failure.
+        }
+        await _preferences!.remove(_restoreCredentialSyncedKey);
+      }
+      rethrow;
+    }
     await _storeTokenPair(auth);
     return _accessToken();
   }
@@ -981,7 +1100,20 @@ class FilamentSyncService {
     if (_accessTokenCache != null && _refreshTokenCache != null) {
       return {'access': _accessTokenCache!, 'refresh': _refreshTokenCache!};
     }
-    final encoded = await _secure.read(key: _sessionKey);
+    String? encoded;
+    try {
+      encoded = await _secure.read(key: _sessionKey);
+    } on Object {
+      // A token encrypted with the old phone's Android Keystore cannot be
+      // decrypted after device transfer. Treat it as absent so Restore
+      // Credentials can establish a fresh server session.
+      try {
+        await _secure.delete(key: _sessionKey);
+      } on Object {
+        // The credential restore path remains available without this cleanup.
+      }
+      return null;
+    }
     if (encoded == null || encoded.isEmpty) return null;
     try {
       final decoded = jsonDecode(encoded);

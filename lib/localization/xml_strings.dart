@@ -212,6 +212,7 @@ class XmlStrings {
   String get serverInvalidAddress => _get('server_invalid_address');
   String get serverRequestRejected => _get('server_request_rejected');
   String get serverConnectionFailed => _get('server_connection_failed');
+  String get serverLocalNetworkDenied => _get('server_local_network_denied');
   String get serverDisconnect => _get('server_disconnect');
   String get serverGithub => _get('server_github');
   String get serverGithubRepository => _get('server_github_repository');
